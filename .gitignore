@@ -1,0 +1,10 @@
+# Configuraciones de VS Code
+.vscode/
+
+# Archivos binarios y ejecutables comunes
+*.exe
+*.out
+*.o
+
+# Carpetas de salida
+/output/

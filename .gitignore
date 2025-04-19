@@ -1,10 +1,13 @@
-# Configuraciones de VS Code
+# Ignorar ejecutables y archivos objeto
+*.exe
+*.o
+*.obj
+*.out
+
+# Ignorar configuración de VS Code
 .vscode/
 
-# Archivos binarios y ejecutables comunes
-*.exe
-*.out
-*.o
-
-# Carpetas de salida
-/output/
+# Carpetas de compilación (por si acaso)
+build/
+Debug/
+Release/

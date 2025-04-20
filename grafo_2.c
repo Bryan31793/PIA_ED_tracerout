@@ -20,15 +20,10 @@ typedef struct Vertice{
 
 typedef struct Grafo{
     Vertice *lista_vertices;    //lista que contiene todos los vertices (es la cabeza)
-    int numero_vertices;        //numero de vertices del grafo
 } Grafo;
 
-typedef struct Nodo_aux {
-    Vertice *vertice;     // referencia al vértice original
-    int distancia;        // distancia mínima conocida
-    int visitado;         // si ya fue visitado
-    Vertice *anterior;    // para reconstruir el camino
-} Nodo_aux;
+
+
 
 //crea un grafo y devuelve un puntero a este
 Grafo *crear_grafo();
@@ -54,30 +49,36 @@ int existe_arista(Vertice *, Vertice *);
 //imprime el grafo
 void imprimir_grafo(Grafo *);
 
-//dijkstra
-int buscar_indice(Nodo_aux *, int n, Vertice *);
+typedef struct NodoAux {
+    Vertice *vertice;     // referencia al vértice original
+    int distancia;        // distancia mínima conocida
+    int visitado;         // si ya fue visitado
+    Vertice *anterior;    // para reconstruir el camino
+} NodoAux;
+
+int buscar_indice(NodoAux *, int n, Vertice *);
 
 void dijkstra(Grafo *, const char *);
 
 int main() {
     Grafo *grafo = crear_grafo();
 
-    agregar_vertice(grafo, "cp0");    
+    agregar_vertice(grafo, "cp0");    //validar que no exista el vertice
     agregar_vertice(grafo, "sw0"); 
- //   agregar_vertice(grafo, "cp0");   
+    agregar_vertice(grafo, "cp0");   
     agregar_vertice(grafo, "rt0");
     agregar_vertice(grafo, "cp1");
 
     agregar_arista(grafo, "cp0", "sw0", 10);
     agregar_arista(grafo, "cp0", "rt0", 5);
-   // agregar_arista(grafo, "cp0", "sw0", 10);
+    agregar_arista(grafo, "cp0", "sw0", 10);
     agregar_arista(grafo, "sw0", "rt0", 15);
     agregar_arista(grafo, "cp1", "sw0", 20);
     
     imprimir_grafo(grafo);
 
     printf("\n\n");
-    dijkstra(grafo, "sw0");
+    dijkstra(grafo, "cp0");
     return 0;
 }
 
@@ -91,7 +92,6 @@ Grafo *crear_grafo() {
 
     //se inicializan valores
     nuevo_grafo->lista_vertices = NULL;
-    nuevo_grafo->numero_vertices = 0;
 
     return nuevo_grafo;
 }
@@ -109,7 +109,6 @@ void agregar_vertice(Grafo *grafo, char *nombre) {
     //Insertar al inicio el nuevo vertice en la lista de vertices
     nuevo_vertice->next = grafo->lista_vertices;    
     grafo->lista_vertices = nuevo_vertice;
-    grafo->numero_vertices++;
 }
 
 Vertice *crear_vertice(char *nombre) {
@@ -207,7 +206,7 @@ void imprimir_grafo(Grafo *grafo) {
     }
 }
 
-int buscar_indice(Nodo_aux *nodos, int n, Vertice *v) {
+int buscar_indice(NodoAux *nodos, int n, Vertice *v) {
     for (int i = 0; i < n; i++) {
         if (nodos[i].vertice == v)
             return i;
@@ -217,31 +216,35 @@ int buscar_indice(Nodo_aux *nodos, int n, Vertice *v) {
 
 void dijkstra(Grafo *grafo, const char *origen_name) {
     // Paso 1: contar vértices
-    int n = grafo->numero_vertices;
+    int n = 0;
     Vertice *v = grafo->lista_vertices;
+    while (v) {
+        n++;
+        v = v->next;
+    }
 
     // Paso 2: crear arreglo auxiliar
-    Nodo_aux *nodos = malloc(sizeof(Nodo_aux) * n);
+    NodoAux *nodos = malloc(sizeof(NodoAux) * n);
     v = grafo->lista_vertices;
     for (int i = 0; i < n; i++) {
-        nodos[i].vertice = v;           //es el vertice
-        nodos[i].distancia = INT_MAX;       //distancia minima se inicializa en 'infinito'
-        nodos[i].visitado = 0;              //no ha sido visitado
-        nodos[i].anterior = NULL;           //aun no hay una referencia a un nodo anterior
-        v = v->next;                    //se avanza al siguiente vertice
+        nodos[i].vertice = v;
+        nodos[i].distancia = INT_MAX;
+        nodos[i].visitado = 0;
+        nodos[i].anterior = NULL;
+        v = v->next;
     }
 
     // Paso 3: encontrar vértice origen
     int origen_idx = -1;
-    for (int i = 0; i < n; i++) {       //se busca el vertice origen en el arreglo nodo de tipo Nodo_aux
-        if (strcmp(nodos[i].vertice->name, origen_name) == 0) {     //cuando se encuentra
-            origen_idx = i;                 //se guarda la el indice
-            nodos[i].distancia = 0;         //su distancia minima es 0
-            break;                          //se rompe el ciclo
+    for (int i = 0; i < n; i++) {
+        if (strcmp(nodos[i].vertice->name, origen_name) == 0) {
+            origen_idx = i;
+            nodos[i].distancia = 0;
+            break;
         }
     }
 
-    if (origen_idx == -1) {             //no se encontro el vertice (esto lo puedo cambiar)
+    if (origen_idx == -1) {
         printf("Vértice origen no encontrado.\n");
         free(nodos);
         return;
@@ -251,30 +254,29 @@ void dijkstra(Grafo *grafo, const char *origen_name) {
     for (int i = 0; i < n; i++) {
         // seleccionar el vértice no visitado con menor distancia
         int u = -1;
-        for (int j = 0; j < n; j++) {       //el primero va a ser el vertice inicial
+        for (int j = 0; j < n; j++) {
             if (!nodos[j].visitado && (u == -1 || nodos[j].distancia < nodos[u].distancia)) {
                 u = j;
             }
         }
 
-        if (nodos[u].distancia == INT_MAX) break; // no quedan accesibles   (representa un vertice no conexo)
+        if (nodos[u].distancia == INT_MAX) break; // no quedan accesibles
 
-        nodos[u].visitado = 1;      //se marca como visitado
+        nodos[u].visitado = 1;
 
         // explorar vecinos
-        Arista *arista = nodos[u].vertice->lista_adyacencia;    //lista de adyacencia
+        Arista *arista = nodos[u].vertice->lista_adyacencia;
         while (arista) {
-            Vertice *vecino = arista->destino;      //vertice adyacente al vertice u
-            int v_idx = buscar_indice(nodos, n, vecino);        //busca el indice del vertice vecino en el array nodos de tipo Nodo_aux
-            if (v_idx != -1 && !nodos[v_idx].visitado) {    //si se encuentra y no ha sido visitado
-                int nueva_dist = nodos[u].distancia + arista->peso;//nueva distancia = distancia al nodo u + peso de la arista al vertice vecino
-
-                if (nueva_dist < nodos[v_idx].distancia) {  //si nueva distancia menor a la distancia para llegar al vertice en nodos
-                    nodos[v_idx].distancia = nueva_dist;    //actualizar la distancia para llegar al vertice en el array nodos
-                    nodos[v_idx].anterior = nodos[u].vertice;   //actualiza puntero al vertice anterior (del cual llego)
+            Vertice *vecino = arista->destino;
+            int v_idx = buscar_indice(nodos, n, vecino);
+            if (v_idx != -1 && !nodos[v_idx].visitado) {
+                int nueva_dist = nodos[u].distancia + arista->peso;
+                if (nueva_dist < nodos[v_idx].distancia) {
+                    nodos[v_idx].distancia = nueva_dist;
+                    nodos[v_idx].anterior = nodos[u].vertice;
                 }
             }
-            arista = arista->next;      //se avanza al siguiente
+            arista = arista->next;
         }
     }
 

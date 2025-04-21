@@ -23,12 +23,24 @@ typedef struct Grafo{
     int numero_vertices;        //numero de vertices del grafo
 } Grafo;
 
-typedef struct Nodo_aux {
+typedef struct Nodo_aux {   //estructura para dijkstra
     Vertice *vertice;     // referencia al vértice original
     int distancia;        // distancia mínima conocida
     int visitado;         // si ya fue visitado
-    Vertice *anterior;    // para reconstruir el camino
+    //Vertice *anterior;    // para reconstruir el camino
+    struct Nodo_aux *back;  //para reconstruir el camino
 } Nodo_aux;
+
+typedef struct Nodo_camino {     //estructura para almacenar el camino
+    Vertice *vertice;       //el vertice en el que estamos
+    Arista *arista_adyacente;   //arista al siguiente vertice del camino
+    struct Nodo_camino *next;        //siguiente nodo de camino
+} Nodo_camino;
+
+typedef struct Camino {
+    Nodo_camino *head;
+} Camino;
+
 
 //crea un grafo y devuelve un puntero a este
 Grafo *crear_grafo();
@@ -57,7 +69,14 @@ void imprimir_grafo(Grafo *);
 //dijkstra
 int buscar_indice(Nodo_aux *, int n, Vertice *);
 
-void dijkstra(Grafo *, const char *);
+Camino *dijkstra(Grafo *, const char *, char *);
+
+//camino
+Camino *crear_camino();
+
+Camino *construir_camino(Nodo_aux *, int, int);    //continuar...
+
+Arista *encontrar_arista(Vertice *, Vertice *);
 
 int main() {
     Grafo *grafo = crear_grafo();
@@ -67,17 +86,33 @@ int main() {
  //   agregar_vertice(grafo, "cp0");   
     agregar_vertice(grafo, "rt0");
     agregar_vertice(grafo, "cp1");
+    agregar_vertice(grafo, "rt1");
 
     agregar_arista(grafo, "cp0", "sw0", 10);
     agregar_arista(grafo, "cp0", "rt0", 5);
    // agregar_arista(grafo, "cp0", "sw0", 10);
     agregar_arista(grafo, "sw0", "rt0", 15);
     agregar_arista(grafo, "cp1", "sw0", 20);
+    agregar_arista(grafo, "rt0", "rt1", 25);
     
     imprimir_grafo(grafo);
 
     printf("\n\n");
-    dijkstra(grafo, "sw0");
+    Camino *camino = dijkstra(grafo, "sw0", "rt1");
+    Nodo_camino *temporal = camino->head;
+    
+    int suma_peso = 0;
+    printf("\n\tCamino de sw0 a rt0:\n\n");
+    while(temporal)
+    {
+        printf(" %s --- ", temporal->vertice->name);
+        if(temporal->arista_adyacente != NULL)
+            suma_peso += temporal->arista_adyacente->peso;
+        temporal = temporal->next;
+    }
+
+    printf("\n\tEl peso del camino es: %d", suma_peso);
+    
     return 0;
 }
 
@@ -215,7 +250,7 @@ int buscar_indice(Nodo_aux *nodos, int n, Vertice *v) {
     return -1;
 }
 
-void dijkstra(Grafo *grafo, const char *origen_name) {
+Camino* dijkstra(Grafo *grafo, const char *origen_name, char *destino_name) {
     // Paso 1: contar vértices
     int n = grafo->numero_vertices;
     Vertice *v = grafo->lista_vertices;
@@ -227,7 +262,8 @@ void dijkstra(Grafo *grafo, const char *origen_name) {
         nodos[i].vertice = v;           //es el vertice
         nodos[i].distancia = INT_MAX;       //distancia minima se inicializa en 'infinito'
         nodos[i].visitado = 0;              //no ha sido visitado
-        nodos[i].anterior = NULL;           //aun no hay una referencia a un nodo anterior
+        //nodos[i].anterior = NULL;           //aun no hay una referencia a un nodo anterior
+        nodos[i].back = NULL;   //NEW FEATURE
         v = v->next;                    //se avanza al siguiente vertice
     }
 
@@ -244,7 +280,7 @@ void dijkstra(Grafo *grafo, const char *origen_name) {
     if (origen_idx == -1) {             //no se encontro el vertice (esto lo puedo cambiar)
         printf("Vértice origen no encontrado.\n");
         free(nodos);
-        return;
+        //return;
     }
 
     // Paso 4: algoritmo principal
@@ -271,12 +307,13 @@ void dijkstra(Grafo *grafo, const char *origen_name) {
 
                 if (nueva_dist < nodos[v_idx].distancia) {  //si nueva distancia menor a la distancia para llegar al vertice en nodos
                     nodos[v_idx].distancia = nueva_dist;    //actualizar la distancia para llegar al vertice en el array nodos
-                    nodos[v_idx].anterior = nodos[u].vertice;   //actualiza puntero al vertice anterior (del cual llego)
+                    //nodos[v_idx].anterior = nodos[u].vertice;   //actualiza puntero al vertice anterior (del cual llego)
+                    nodos[v_idx].back = &nodos[u];      //NEW FEATURE   
                 }
             }
             arista = arista->next;      //se avanza al siguiente
         }
-    }
+    }   //** tengo que detener el algoritmo cuando encuentre el camino de mi vertice destino
 
     // Ejemplo: mostrar resultados
     printf("Distancias desde %s:\n", origen_name);
@@ -284,6 +321,73 @@ void dijkstra(Grafo *grafo, const char *origen_name) {
         printf("A %s: %d\n", nodos[i].vertice->name,
                nodos[i].distancia == INT_MAX ? -1 : nodos[i].distancia);
     }
+    int vd_idx = buscar_indice(nodos, n, buscar_vertice(grafo, destino_name));
+    //return nodos[vd_idx];       //en vez de retornar podria llamar a construir_camino
+    Camino *nuevo_camino = construir_camino(nodos, vd_idx, n);
 
-    free(nodos);
+    free(nodos);        //en algun momento debo liberarlo
+    return nuevo_camino;
+}
+
+Camino *crear_camino()
+{
+    Camino *nuevo_camino = (Camino*)malloc(sizeof(Camino));
+
+    if(!nuevo_camino) 
+        return NULL;
+
+    nuevo_camino->head = NULL;
+    return nuevo_camino;
+}
+
+Camino *construir_camino(Nodo_aux *nodos, int vf_idx, int n)   
+{
+    Camino *nuevo_camino = crear_camino();
+    Nodo_camino *v_camino = (Nodo_camino*)malloc(sizeof(Nodo_camino));
+    if(!v_camino || !nuevo_camino) {
+        printf("\n\tError: no se asigno memoria correctamente");
+        return NULL;
+    }
+    v_camino->vertice = nodos[vf_idx].vertice;
+    v_camino->next = NULL;
+    v_camino->arista_adyacente = NULL;
+    nuevo_camino->head = v_camino;
+
+    //int vb_idx = vf_idx;
+    while(nodos[vf_idx].back != NULL) 
+    {
+        int vb_idx = buscar_indice(nodos, n, nodos[vb_idx].back->vertice);
+
+        Nodo_camino *vertice_camino = (Nodo_camino*)malloc(sizeof(Nodo_camino));
+        if(!vertice_camino) {
+            printf("\n\tError: no se asigno memoria correctamente");
+            free(nuevo_camino);
+            return NULL;
+        }
+
+        vertice_camino->vertice = nodos[vb_idx].vertice;
+        vertice_camino->arista_adyacente = encontrar_arista(nodos[vb_idx].vertice, nodos[vf_idx].vertice);  //Ojo aqui
+        vertice_camino->next = nuevo_camino->head;
+        nuevo_camino->head = vertice_camino;
+        
+        vf_idx = vb_idx;
+    }
+    return nuevo_camino;
+}
+
+Arista *encontrar_arista(Vertice *inicio, Vertice *destino) //no necesito el grafo realmente
+{
+    Arista *temporal_arista = inicio->lista_adyacencia;
+
+    if(!destino)
+        return NULL;
+
+    while(temporal_arista && temporal_arista->destino != destino) {
+        temporal_arista = temporal_arista->next;
+    }
+
+    if(!temporal_arista)
+        return NULL;
+
+    return temporal_arista;
 }

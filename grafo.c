@@ -35,13 +35,11 @@ typedef struct Nodo_aux {   //estructura para dijkstra
 } Nodo_aux;
 
 typedef struct Nodo_camino {     //estructura para almacenar el camino
-    Vertice *vertice;       //el vertice en el que estamos
-<<<<<<< HEAD
+    Vertice *vertice; 
+          //el vertice en el que estamos
     Arista *arista_adyacente_1;   //arista al siguiente vertice del camino
-    Arista *arista_adyacente_2;     //lo mismo que la anterior pero desde el vertice contrario
-=======
-    Arista *arista_adyacente;   //arista al siguiente vertice del camino
->>>>>>> 48dbea58f7f6b6f0b2ff7cebe5056216dc299ee6
+    Arista *arista_adyacente_2;
+         //lo mismo que la anterior pero desde el vertice contrario
     struct Nodo_camino *next;        //siguiente nodo de camino
 } Nodo_camino;
 
@@ -126,13 +124,10 @@ int main() {
     while(temporal)
     {
         printf(" %s --- ", temporal->vertice->name);
-<<<<<<< HEAD
+
         if(temporal->arista_adyacente_1 != NULL)
             suma_peso += temporal->arista_adyacente_1->peso;
-=======
-        if(temporal->arista_adyacente != NULL)
-            suma_peso += temporal->arista_adyacente->peso;
->>>>>>> 48dbea58f7f6b6f0b2ff7cebe5056216dc299ee6
+
         temporal = temporal->next;
     }
 
@@ -292,11 +287,9 @@ int buscar_indice(Nodo_aux *nodos, int n, Vertice *v) {
     return -1;
 }
 
-<<<<<<< HEAD
+
 Camino* dijkstra(Grafo *grafo, const char *origen_name, char *destino_name) {   //puedo detener el algoritmo en el momento que se encuentra el camino que buscamos
-=======
-Camino* dijkstra(Grafo *grafo, const char *origen_name, char *destino_name) {
->>>>>>> 48dbea58f7f6b6f0b2ff7cebe5056216dc299ee6
+
     // Paso 1: contar vértices
     int n = grafo->numero_vertices;
     Vertice *v = grafo->lista_vertices;
@@ -396,12 +389,10 @@ Camino *construir_camino(Nodo_aux *nodos, int vf_idx, int n)
     }
     v_camino->vertice = nodos[vf_idx].vertice;
     v_camino->next = NULL;
-<<<<<<< HEAD
+
     v_camino->arista_adyacente_1 = NULL;
     v_camino->arista_adyacente_2 = NULL;
-=======
-    v_camino->arista_adyacente = NULL;
->>>>>>> 48dbea58f7f6b6f0b2ff7cebe5056216dc299ee6
+
     nuevo_camino->head = v_camino;
 
     //int vb_idx = vf_idx;
@@ -417,12 +408,10 @@ Camino *construir_camino(Nodo_aux *nodos, int vf_idx, int n)
         }
 
         vertice_camino->vertice = nodos[vb_idx].vertice;
-<<<<<<< HEAD
+
         vertice_camino->arista_adyacente_1 = encontrar_arista(nodos[vb_idx].vertice, nodos[vf_idx].vertice);  //Ojo aqui
         vertice_camino->arista_adyacente_2 = encontrar_arista(nodos[vf_idx].vertice, nodos[vb_idx].vertice);
-=======
-        vertice_camino->arista_adyacente = encontrar_arista(nodos[vb_idx].vertice, nodos[vf_idx].vertice);  //Ojo aqui
->>>>>>> 48dbea58f7f6b6f0b2ff7cebe5056216dc299ee6
+
         vertice_camino->next = nuevo_camino->head;
         nuevo_camino->head = vertice_camino;
         

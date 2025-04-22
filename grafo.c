@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <pthread.h>    //para hilos
+#include <unistd.h>     //para la funcion usleep
 
 //se pueden agregar mas campos a los TDA
 struct Vertice;
@@ -9,6 +11,7 @@ struct Vertice;
 typedef struct Arista{
     int peso;       //peso de la arista
     struct Vertice *destino;   //vertice al que conduce esa arista
+    pthread_mutex_t mutex;
     struct Arista *next;        //siguiente arista incidente al vertice actual
 } Arista;
 
@@ -72,6 +75,8 @@ int buscar_indice(Nodo_aux *, int n, Vertice *);
 
 Camino *dijkstra(Grafo *, const char *, char *);
 
+void imprimir_camino(Camino *);
+
 //camino
 Camino *crear_camino();
 
@@ -79,9 +84,19 @@ Camino *construir_camino(Nodo_aux *, int, int);    //continuar...
 
 Arista *encontrar_arista(Vertice *, Vertice *);
 
-int main() {
-    Grafo *grafo = crear_grafo();
+//Hilos
+void *ajustar_pesos(void *arg);
 
+//prueba de hilos
+void prueba_hilos(Grafo *);
+
+//grafo en base a la topologia elegida
+Grafo *generar_topologia();
+
+int main() {
+    //Grafo *grafo = crear_grafo();
+
+    /*
     agregar_vertice(grafo, "cp0");    
     agregar_vertice(grafo, "sw0"); 
  //   agregar_vertice(grafo, "cp0");   
@@ -113,6 +128,22 @@ int main() {
     }
 
     printf("\n\tEl peso del camino es: %d", suma_peso);
+
+    
+    pthread_t threads[2];
+
+    for(int i = 0; i < 2; i++) {
+        pthread_create(&threads[i], NULL, ajustar_pesos, camino);
+    } 
+
+    printf("\n\tHola como estas?");
+    
+    for(int i = 0; i < 2; i++) {
+        pthread_detach(threads[i]);
+    }*/
+   Grafo *grafo = generar_topologia();
+   
+   prueba_hilos(grafo);
     
     return 0;
 }
@@ -213,6 +244,7 @@ void crear_arista(int peso, Vertice *vertice_inicial, Vertice *vertice_destino) 
     nueva_arista->next = vertice_inicial->lista_adyacencia;
     vertice_inicial->lista_adyacencia = nueva_arista;
     nueva_arista->destino = vertice_destino;
+    pthread_mutex_init(&nueva_arista->mutex, NULL);     //inicializar mutex (destruir al final)
 }
 
 int existe_arista(Vertice *vertice_1, Vertice *vertice_2) {
@@ -378,8 +410,8 @@ Camino *construir_camino(Nodo_aux *nodos, int vf_idx, int n)
     return nuevo_camino;
 }
 
-Arista *encontrar_arista(Vertice *inicio, Vertice *destino) //no necesito el grafo realmente
-{
+Arista *encontrar_arista(Vertice *inicio, Vertice *destino) {//no necesito el grafo realmente
+
     Arista *temporal_arista = inicio->lista_adyacencia;
 
     if(!destino)
@@ -393,4 +425,122 @@ Arista *encontrar_arista(Vertice *inicio, Vertice *destino) //no necesito el gra
         return NULL;
 
     return temporal_arista;
+}
+
+void *ajustar_pesos(void *arg) {
+    Camino *camino = (Camino *)arg; //casting
+    Nodo_camino *temporal = camino->head;
+    //int peso_total = 0;
+
+    while(temporal && temporal->arista_adyacente_1) {
+        Arista *a1 = temporal->arista_adyacente_1;
+        Arista *a2 = temporal->arista_adyacente_2;
+
+        //se estandariza el orden de bloqueo de los mutex para evitar deadlocks
+        if(a1 < a2) {
+            pthread_mutex_lock(&a1->mutex);
+            pthread_mutex_lock(&a2->mutex);
+        }
+        else {
+            pthread_mutex_lock(&a2->mutex);
+            pthread_mutex_lock(&a1->mutex);
+        }
+        temporal->arista_adyacente_1->peso += 10;
+        temporal->arista_adyacente_2->peso += 10;
+        pthread_mutex_unlock(&a1->mutex);   //se desbloquean los mutex
+        pthread_mutex_unlock(&a2->mutex);
+
+        //peso_total += temporal->arista_adyacente_1->peso;
+        temporal = temporal->next;
+    }
+    //printf("\n\tPeso del camino luego del ajuste: %d", peso_total);
+    sleep(20);  //funciona en segundos
+
+    
+    temporal = camino->head;
+    //peso_total = 0;
+    while(temporal && temporal->arista_adyacente_1) {
+        Arista *a1 = temporal->arista_adyacente_1;
+        Arista *a2 = temporal->arista_adyacente_2;
+
+        //se estandariza el orden de bloqueo de los mutex para evitar deadlocks
+        if(a1 < a2) {
+            pthread_mutex_lock(&a1->mutex);
+            pthread_mutex_lock(&a2->mutex);
+        }
+        else {
+            pthread_mutex_lock(&a2->mutex);
+            pthread_mutex_lock(&a1->mutex);
+        }
+        temporal->arista_adyacente_1->peso -= 10;
+        temporal->arista_adyacente_2->peso -= 10;
+        pthread_mutex_unlock(&a1->mutex);   //se desbloquean los mutex
+        pthread_mutex_unlock(&a2->mutex);
+
+        //peso_total += temporal->arista_adyacente_1->peso;
+        temporal = temporal->next;
+    }
+    //printf("\n\tPeso del camino luego de transcurrir el tiempo: %d", peso_total);
+    free(camino);
+
+    return NULL;
+}
+
+void prueba_hilos(Grafo *grafo)
+{
+    int opc;
+    
+    printf("\n\t**Prueba de hilos**");
+    do
+    {
+        printf("\n\tCamino de rt0 a rt4:\n");
+        Camino *camino = dijkstra(grafo, "rt0", "rt4");
+        imprimir_camino(camino);
+        pthread_t thread;
+        
+        pthread_create(&thread, NULL, ajustar_pesos, camino);
+        pthread_detach(thread);
+
+        printf("\n\tSalir?(1-si/2-no): ");
+        scanf("%d", &opc);
+    }while(opc == 2);
+    
+}
+
+void imprimir_camino(Camino *camino)
+{
+    Nodo_camino *temporal = camino->head;
+
+    printf("\n\tCamino:\n");
+    while(temporal)
+    {
+        printf(" %s --- ", temporal->vertice->name);
+        temporal = temporal->next;
+    }
+}
+
+Grafo *generar_topologia()
+{
+    Grafo *grafo = crear_grafo();
+
+    agregar_vertice(grafo, "rt0");    
+    agregar_vertice(grafo, "rt1"); 
+ //   agregar_vertice(grafo, "cp0");   
+    agregar_vertice(grafo, "rt2");
+    agregar_vertice(grafo, "rt3");
+    agregar_vertice(grafo, "rt4");
+
+    agregar_arista(grafo, "rt0", "rt1", 10);
+    agregar_arista(grafo, "rt0", "rt2", 10);
+    agregar_arista(grafo, "rt0", "rt3", 10);
+    agregar_arista(grafo, "rt0", "rt4", 10);
+    agregar_arista(grafo, "rt1", "rt2", 10);
+    agregar_arista(grafo, "rt1", "rt3", 10);
+    agregar_arista(grafo, "rt1", "rt4", 10);
+    agregar_arista(grafo, "rt2", "rt3", 10);
+    agregar_arista(grafo, "rt2", "rt4", 10);
+    agregar_arista(grafo, "rt3", "rt4", 10);
+
+    return grafo;
+    
 }

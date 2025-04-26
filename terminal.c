@@ -36,6 +36,9 @@ void main_terminal()
     }
 }
 
+//aun hay algunos problemas
+//ejemplo:     **comando correcto** sdf      <--se ejecuta el comando
+//ejemplo:     **comando correcto**\tdsf     <--no se ejecuta el comando
 char *leer_entrada()     //el comando se podria leer dentro de esta funcion
 {
     //debo crear un bloque de memoria
@@ -66,7 +69,7 @@ char *leer_entrada()     //el comando se podria leer dentro de esta funcion
     }
     int j = 0;
 
-    while(entrada[i] != ' ' && entrada[i] != '\0') {
+    while(entrada[i] != ' ' && entrada[i] != '\0' && entrada[i] != '\t') {
         comando[j] = entrada[i];
         j++;
         i++;

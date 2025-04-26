@@ -332,7 +332,8 @@ Camino* dijkstra(Grafo *grafo, const char *origen_name, char *destino_name) {   
             }
         }
 
-        if (nodos[u].distancia == INT_MAX) break; // no quedan accesibles   (representa un vertice no conexo)
+        if (nodos[u].distancia == INT_MAX) 
+            break; // no quedan accesibles   (representa un vertice no conexo)
 
         nodos[u].visitado = 1;      //se marca como visitado
 
@@ -352,16 +353,17 @@ Camino* dijkstra(Grafo *grafo, const char *origen_name, char *destino_name) {   
             }
             arista = arista->next;      //se avanza al siguiente
         }
-    }   //** tengo que detener el algoritmo cuando encuentre el camino de mi vertice destino
+        if(strcmp(nodos[u].vertice->name, destino_name) == 0)   //se detiene el algoritmo si ya se encontro el camino mas corto a el vertice destino
+            break;
+    }  
 
     // Ejemplo: mostrar resultados
-    printf("Distancias desde %s:\n", origen_name);
+    printf("Distancias desde %s:\n", origen_name);  //esto se va a quitar
     for (int i = 0; i < n; i++) {
         printf("A %s: %d\n", nodos[i].vertice->name,
                nodos[i].distancia == INT_MAX ? -1 : nodos[i].distancia);
     }
     int vd_idx = buscar_indice(nodos, n, buscar_vertice(grafo, destino_name));
-    //return nodos[vd_idx];       //en vez de retornar podria llamar a construir_camino
     Camino *nuevo_camino = construir_camino(nodos, vd_idx, n);
 
     free(nodos);        //en algun momento debo liberarlo
@@ -491,7 +493,7 @@ void *ajustar_pesos(void *arg) {
         temporal = temporal->next;
     }
     //printf("\n\tPeso del camino luego de transcurrir el tiempo: %d", peso_total);
-    free(camino);
+    free(camino);   //se libera el camino
 
     return NULL;
 }

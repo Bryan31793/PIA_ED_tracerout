@@ -38,7 +38,6 @@ void main_terminal()
 
 //aun hay algunos problemas
 //ejemplo:     **comando correcto** sdf      <--se ejecuta el comando
-//ejemplo:     **comando correcto**\tdsf     <--no se ejecuta el comando
 char *leer_entrada()     //el comando se podria leer dentro de esta funcion
 {
     //debo crear un bloque de memoria

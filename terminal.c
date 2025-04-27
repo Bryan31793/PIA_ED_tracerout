@@ -33,7 +33,12 @@ void main_terminal()
         aux = leer_entrada();
 
         if(aux) {
-            if(strcmp(aux, "help") == 0) {
+            if(strcmp(aux, "send") == 0) {
+                //aqui van las 3 opciones de send
+                //necesito otra funcion para determinar lo que se envia y en base a eso los nombres de los equipos
+                printf("xdxd");
+            }
+            else if(strcmp(aux, "help") == 0) {
                 printf("%-35s%s\n\n", "Comando", "Descripcion");
                 for(int i = 0; i < num_comandos; i++) {
                     printf("%-35s%s\n", lista_comandos[i].comando, lista_comandos[i].descripcion);
@@ -69,10 +74,11 @@ char *leer_entrada()     //el comando se podria leer dentro de esta funcion
         return NULL;
     }
         
-
+    //lee la entrada
     fgets(entrada, 50, stdin);
     entrada[strcspn(entrada, "\n")] = '\0'; //strcspn regresa la cantidad de caracteres que van desde aux[0] a "\n" (debe pasarse como cadena)
 
+    //avanza e ignora los espacios y tabulaciones a la izquierda
     int i = 0;
     while(entrada[i] == ' ' || entrada[i] == '\t') {
         i++;
@@ -83,20 +89,38 @@ char *leer_entrada()     //el comando se podria leer dentro de esta funcion
         return entrada;
     }
 
-    char *comando = (char*)malloc(sizeof(char) * 50);
+    char *comando = (char*)malloc(sizeof(char) * 50);   //se crea nuevo espacio en memoria para la cadena
     if(!comando) {
         printf("\n\tError al asignar memoria");
         return NULL;
     }
     int j = 0;
 
-    while(entrada[i] != ' ' && entrada[i] != '\0' && entrada[i] != '\t') {
+    while(entrada[i] != ' ' && entrada[i] != '\0' && entrada[i] != '\t') {  //se detiene cuando encuentra un espacio, caracter nulo o tabulacion
         comando[j] = entrada[i];
         j++;
         i++;
     }
+    //pero a la derecha puede haber mas 
+    int pos_espacio = j;
+    while(entrada[i] != '\0') {
+        if(comando[j - 1] != ' ' && entrada[i] == ' ') {    //pero que pasa si ya no hay nada mas que solo espacios??
+            comando[j] = ' ';
+            pos_espacio = j;    //guardo la posicion en que esta el espacio
+            j++;
+            
+        }
+        
+        i++;
+        while(entrada[i] != ' ' && entrada[i] != '\0' && entrada[i] != '\t') {
+            comando[j] = entrada[i];
+            i++;
+            j++;
+            pos_espacio = j;
+        }
+    }
+    comando[pos_espacio] = '\0';
     free(entrada);
-    comando[j] = '\0';
     return comando;
     
 }

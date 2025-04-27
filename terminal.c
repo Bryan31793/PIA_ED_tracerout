@@ -3,6 +3,13 @@
 #include <string.h>
 #include <stdlib.h>
 
+#define num_comandos 6
+
+//estructura que alberga los comandos y su descripcion
+typedef struct Comandos {
+    char comando[70];
+    char descripcion[70];
+}Comandos;
 
 //funcion que se encarga de llamar a todas las demas
 void main_terminal();
@@ -12,6 +19,12 @@ char *leer_entrada();
 
 void main_terminal()
 {
+    Comandos lista_comandos[num_comandos] = {
+    {"help", "Muestra todos comandos y su descripcion"}, 
+    {"send message from '' to ''", "Envia un mensaje del equipo i al equipo j"},
+    {"send file from '' to ''", "Envia un archivo del equipo i al equipo j"},
+    {"send image from '' to ''", "Envia una imagen del equipo i al equipo j"},
+    {"saludo", "Muestra un saludo"},{"salir", "Sale de la terminal"}};
 
     while(1)
     {   
@@ -20,8 +33,16 @@ void main_terminal()
         aux = leer_entrada();
 
         if(aux) {
-            if(strcmp(aux, "saludo") == 0)
-            printf("\n\tHola colega!!\n");
+            if(strcmp(aux, "help") == 0) {
+                printf("%-35s%s\n\n", "Comando", "Descripcion");
+                for(int i = 0; i < num_comandos; i++) {
+                    printf("%-35s%s\n", lista_comandos[i].comando, lista_comandos[i].descripcion);
+                    //printf("%s", lista_comandos[i].comando);
+                    //printf("\t\t\t\t\t\t%s\n", lista_comandos[i].descripcion);
+                }
+            }
+            else if(strcmp(aux, "saludo") == 0)
+                printf("\n\tHola colega!!\n");
             else if(strcmp(aux, "salir") == 0) {
                 printf("\n\tSaliendo...\n");
                 break;

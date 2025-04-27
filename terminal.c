@@ -83,8 +83,10 @@ void main_terminal()
     }
 }
 
+
 void argumento_invalido(char *comando, char *argumento) {
     printf("\tError: el comando %s no tiene el argumento %s\n", comando, argumento);
+
 }
 
 int main()

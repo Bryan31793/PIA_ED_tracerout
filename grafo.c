@@ -16,7 +16,7 @@ typedef struct Arista{
 } Arista;
 
 typedef struct Vertice{
-    char name[4];      //nombre del vertice    (el nombre tendra que cambiar a algo mas descriptivo ó agregar un campo extra)
+    char name[5];      //nombre del vertice    (el nombre tendra que cambiar a algo mas descriptivo ó agregar un campo extra)
     Arista *lista_adyacencia;       //lista de las aristas adyacentes
     struct Vertice *next;      //siguiente vertice del grafo en general
 } Vertice;
@@ -316,8 +316,8 @@ Camino* dijkstra(Grafo *grafo, const char *origen_name, char *destino_name) {   
         }
     }
 
-    if (origen_idx == -1) {             //no se encontro el vertice (esto lo puedo cambiar)
-        printf("Vértice origen no encontrado.\n");
+    if (origen_idx == -1) {             //no se encontro el vertice (esto lo puedo cambiar) //voy a asegurar de que los vertices ya existan en este punto
+        printf("Vertice origen no encontrado.\n");
         free(nodos);
         //return;
     }
@@ -506,7 +506,7 @@ void prueba_hilos(Grafo *grafo)
     do
     {
         printf("\n\tCamino de rt0 a rt4:\n");
-        Camino *camino = dijkstra(grafo, "rt0", "rt4");
+        Camino *camino = dijkstra(grafo, "rt00", "rt04");
         imprimir_camino(camino);
         pthread_t thread;
         
@@ -535,23 +535,23 @@ Grafo *generar_topologia()
 {
     Grafo *grafo = crear_grafo();
 
-    agregar_vertice(grafo, "rt0");    
-    agregar_vertice(grafo, "rt1"); 
+    agregar_vertice(grafo, "rt00");    
+    agregar_vertice(grafo, "rt01"); 
  //   agregar_vertice(grafo, "cp0");   
-    agregar_vertice(grafo, "rt2");
-    agregar_vertice(grafo, "rt3");
-    agregar_vertice(grafo, "rt4");
+    agregar_vertice(grafo, "rt02");
+    agregar_vertice(grafo, "rt03");
+    agregar_vertice(grafo, "rt04");
 
-    agregar_arista(grafo, "rt0", "rt1", 10);
-    agregar_arista(grafo, "rt0", "rt2", 10);
-    agregar_arista(grafo, "rt0", "rt3", 10);
-    agregar_arista(grafo, "rt0", "rt4", 10);
-    agregar_arista(grafo, "rt1", "rt2", 10);
-    agregar_arista(grafo, "rt1", "rt3", 10);
-    agregar_arista(grafo, "rt1", "rt4", 10);
-    agregar_arista(grafo, "rt2", "rt3", 10);
-    agregar_arista(grafo, "rt2", "rt4", 10);
-    agregar_arista(grafo, "rt3", "rt4", 10);
+    agregar_arista(grafo, "rt00", "rt01", 10);
+    agregar_arista(grafo, "rt00", "rt02", 10);
+    agregar_arista(grafo, "rt00", "rt03", 10);
+    agregar_arista(grafo, "rt00", "rt04", 10);
+    agregar_arista(grafo, "rt01", "rt02", 10);
+    agregar_arista(grafo, "rt01", "rt03", 10);
+    agregar_arista(grafo, "rt01", "rt04", 10);
+    agregar_arista(grafo, "rt02", "rt03", 10);
+    agregar_arista(grafo, "rt02", "rt04", 10);
+    agregar_arista(grafo, "rt03", "rt04", 10);
 
     return grafo;
     

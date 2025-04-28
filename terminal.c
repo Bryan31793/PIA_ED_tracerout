@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <ctype.h> //isdigit
 
 #define num_comandos 6
 
@@ -16,12 +17,16 @@ void main_terminal();
 
 void argumento_invalido(char *, char *);
 
+void enviar(char *, int);
+
+int validacion_equipos(char *);
+
 void main_terminal()
 {
     Comandos lista_comandos[num_comandos] = {
     {"help", "Muestra todos comandos y su descripcion"}, 
-    {"send message from '' to ''", "Envia un mensaje del equipo i al equipo j"},
-    {"send file from '' to ''", "Envia un archivo del equipo i al equipo j"},
+    {"send message from '' to ''", "Envia un mensaje del equipo i al equipo j"},    //para message deberia limpiar la cadena de una forma diferente
+    {"send file from '' to ''", "Envia un archivo del equipo i al equipo j"},   //entre file y from podria haber algo como tarea.txt
     {"send image from '' to ''", "Envia una imagen del equipo i al equipo j"},
     {"saludo", "Muestra un saludo"},{"salir", "Sale de la terminal"}};
 
@@ -68,23 +73,73 @@ void main_terminal()
                     }
                 }
             }
-            else if(strcmp(comando, "saludo") == 0)
+            else if(strcmp(comando, "saludo") == 0)     //este no va
                 printf("\n\tHola colega!!\n");
-            else if(strcmp(comando, "salir") == 0) {
+            else if(strcmp(comando, "salir") == 0) {        //este probablemente tampoco
                 printf("\n\tSaliendo...\n");
                 break;
             } 
             else    //esta es la ultima condicion
                 printf("\n\tError: no existe comando: '%s'\n", comando); 
         
-        }
-
-        
+        }        
     }
 }
 
 void argumento_invalido(char *comando, char *argumento) {
     printf("\tError: el comando %s no tiene el argumento %s\n", comando, argumento);
+}
+
+
+void enviar(char *token, int recursos) {    //los recursos dependen de lo que se envia (file/message/image)
+    //para este punto ya se debio haber consumido el from
+    char *vertice_1 = strtok(NULL, " \t");
+    if(!vertice_1) {    //si se ingreso send image from
+        printf("\n\tError: el comando from deberia tener un argumento");
+        return;
+    }
+
+    token = strtok(NULL, " \t");
+    if(!token) {        //si se ingreso send file from v1
+        printf("\n\tError: comando incompleto");
+        return;
+    }
+
+    char *vertice_2 = strtok(NULL, " \t");
+    if(!vertice_1) {    //si se ingreso send message from v1 to
+        printf("\n\tError: el comando to deberia tener un argumento");
+        return;
+    }
+
+    token = strtok(NULL, " \t");
+    if(token) {     //si se ingreso send file from v1 to v2 sfdgas
+        printf("\n\tError: %s no es parte del comando", token);
+        return;
+    }
+
+    //tambien valirdar que los vertices sean equipos
+
+    //aqui se valida que existan los vertices con la funcion de grafo
+    //despues enviarlo a dijstra y almacenar el camino
+    //luego mandarlo a la funcion ajustar_pesos (crear estructura para empaquetar los parametros de la funcoin ajustar_pesos)
+
+    
+    
+    
+    
+}
+
+int validacion_equipos(char *vertice) {
+    //validacion de longitud == 4
+    if(strcspn(vertice, '\0') != 4) //los vertices siguen el formato PC##
+        return 0;
+
+    if(vertice[0] != 'P' && vertice[1] != 'C')
+        return 0;
+    
+    //puedo agregar mas validaciones para limpiar mas por ejemplo: que los siguientes dos caracteres sean numeros
+    if()
+    
 }
 
 int main()

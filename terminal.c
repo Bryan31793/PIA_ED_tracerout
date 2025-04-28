@@ -86,10 +86,8 @@ void main_terminal()
     }
 }
 
-
 void argumento_invalido(char *comando, char *argumento) {
     printf("\tError: el comando %s no tiene el argumento %s\n", comando, argumento);
-
 }
 
 
@@ -119,10 +117,14 @@ void enviar(char *token, int recursos) {    //los recursos dependen de lo que se
         return;
     }
 
-    //tambien valirdar que los vertices sean equipos
+    //tambien validar que los vertices sean equipos
+    if(!validacion_equipos(vertice_1) || !validacion_equipos(vertice_2))   //no cumplen
+        return;
 
     //aqui se valida que existan los vertices con la funcion de grafo
+
     //despues enviarlo a dijstra y almacenar el camino
+    
     //luego mandarlo a la funcion ajustar_pesos (crear estructura para empaquetar los parametros de la funcoin ajustar_pesos)
 
     
@@ -132,15 +134,18 @@ void enviar(char *token, int recursos) {    //los recursos dependen de lo que se
 }
 
 int validacion_equipos(char *vertice) {
-    //validacion de longitud == 4
-    if(strcspn(vertice, '\0') != 4) //los vertices siguen el formato PC##
+    //los vertices debe seguir el formato PC##
+
+    if(strcspn(vertice, '\0') != 4) //se valida que la longitud sea correcta
         return 0;
 
-    if(vertice[0] != 'P' && vertice[1] != 'C')
+    if(vertice[0] != 'P' && vertice[1] != 'C')  //los primeros dos caracteres deben ser P y C
         return 0;
     
-    //puedo agregar mas validaciones para limpiar mas por ejemplo: que los siguientes dos caracteres sean numeros
-    if()
+    if(!isdigit(vertice[2]) || !isdigit(vertice[3]))   //los siguientes dos digitos deben ser numeros
+        return 0;
+
+    return 1;
     
 }
 

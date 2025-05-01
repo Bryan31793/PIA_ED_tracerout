@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h> //isdigit
+#include "Grafo.h"
 
 #define num_comandos 6
 
@@ -21,8 +22,11 @@ void enviar(char *, int);
 
 int validacion_equipos(char *);
 
+
 void main_terminal()
 {
+    Grafo *grafo = generar_topologia();
+    
     Comandos lista_comandos[num_comandos] = {
     {"help", "Muestra todos comandos y su descripcion"}, 
     {"send message from '' to ''", "Envia un mensaje del equipo i al equipo j"},    //para message deberia limpiar la cadena de una forma diferente
@@ -122,6 +126,8 @@ void enviar(char *token, int recursos) {    //los recursos dependen de lo que se
         return;
 
     //aqui se valida que existan los vertices con la funcion de grafo
+    //Vertice *vertice_origen = buscar_vertice(grafo, vertice_1);
+    //Vertice *vertice_destion = buscar_vertice(grafo, vertice_2);
 
     //despues enviarlo a dijstra y almacenar el camino
     
@@ -136,7 +142,7 @@ void enviar(char *token, int recursos) {    //los recursos dependen de lo que se
 int validacion_equipos(char *vertice) {
     //los vertices debe seguir el formato PC##
 
-    if(strcspn(vertice, '\0') != 4) //se valida que la longitud sea correcta
+    if(strlen(vertice) != 4) //se valida que la longitud sea correcta 
         return 0;
 
     if(vertice[0] != 'P' && vertice[1] != 'C')  //los primeros dos caracteres deben ser P y C

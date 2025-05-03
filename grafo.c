@@ -95,6 +95,9 @@ void *ajustar_pesos(void *arg);
 //prueba de hilos
 void prueba_hilos(Grafo *);
 
+//funcion que levanta la conexion dado el nombre de los vertices adyacentes
+void levantar_conexion(Grafo *, char *, char *);
+
 //grafo en base a la topologia elegida
 Grafo *generar_topologia();
 
@@ -458,10 +461,11 @@ void *ajustar_pesos(void *arg) {
     Nodo_camino *temporal = camino->head;
     //int peso_total = 0;
 
-    while(temporal && temporal->arista_adyacente_1) {
+    while(temporal && temporal->arista_adyacente_1) { //temporal->caida != true     ??
         Arista *a1 = temporal->arista_adyacente_1;
         Arista *a2 = temporal->arista_adyacente_2;
 
+        //aqui podria haber un if para que no entre si la conexion esta caida
         //se estandariza el orden de bloqueo de los mutex para evitar deadlocks
         if(a1 < a2) {
             pthread_mutex_lock(&a1->mutex);
@@ -473,6 +477,19 @@ void *ajustar_pesos(void *arg) {
         }
         temporal->arista_adyacente_1->peso += 10;
         temporal->arista_adyacente_2->peso += 10;
+
+        //aqui tendria que hacer algo por si se supera el limite
+        if(temporal->arista_adyacente_1->peso > temporal->arista_adyacente_1->peso_max) {   //si se supera al peso en la suma anterior ó en otro hilo
+            temporal->arista_adyacente_1->peso -= 10;
+            temporal->arista_adyacente_2->peso -= 10;
+            temporal->arista_adyacente_1->caida = true; //ahora estan caidas
+            temporal->arista_adyacente_2->caida = true;
+            pthread_mutex_unlock(&a1->mutex);   //se desbloquean los mutex
+            pthread_mutex_unlock(&a2->mutex);
+            break;  //ya no continua el ciclo
+            //debe haber algo que diferencie si se completo el camino o no (para mostrarlo)
+        }
+
         pthread_mutex_unlock(&a1->mutex);   //se desbloquean los mutex
         pthread_mutex_unlock(&a2->mutex);
 
@@ -533,6 +550,33 @@ void imprimir_camino(Camino *camino)
         printf(" %s --- ", temporal->vertice->name);
         temporal = temporal->next;
     }
+}
+
+void levantar_conexion(Grafo *grafo, char *v_1, char *v_2) {
+    Vertice *vertice_1 = buscar_vertice(grafo, v_1);
+    Vertice *vertice_2 = buscar_vertice(grafo, v_2);
+
+    if(!vertice_1 || vertice_2) {
+        printf("\n\tError: uno o ambos vertices no existen");
+        return;
+    }
+
+    Arista *conexion_1 = encontrar_arista(vertice_1, vertice_2);
+    Arista *conexion_2 = encontrar_arista(vertice_2, vertice_1);
+    if(!conexion_1) {
+        printf("\n\tError: no existe conexion entre %s y %s", vertice_1->name, vertice_2->name);
+        return;
+    }
+
+    if(conexion_1->caida) {   //caso en que la conexion no esta caida
+        printf("\n\tLa conexion no esta caida");
+        return;
+    }
+
+    //tengo que hacer que se tome un tiempo antes de que se levante la conexion 
+    //probablemente tenga que ser una formula para obtener el tiempo necesario para que el peso de la conexion quede en su base
+    conexion_1->caida = false;
+    conexion_2->caida = false;
 }
 
 Grafo *generar_topologia()

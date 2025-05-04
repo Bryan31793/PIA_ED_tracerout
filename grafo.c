@@ -51,6 +51,13 @@ typedef struct Camino {
 } Camino;
 
 
+typedef struct Reconexion {     //estructura necesaria para empaquetar los argumentos de la funcion 'levantar_conexion'
+    Grafo *grafo;
+    char vertice_1[5];
+    char vertice_2[5];
+} Reconexion; 
+
+
 //crea un grafo y devuelve un puntero a este
 Grafo *crear_grafo();
 
@@ -96,7 +103,7 @@ void *ajustar_pesos(void *arg);
 void prueba_hilos(Grafo *);
 
 //funcion que levanta la conexion dado el nombre de los vertices adyacentes
-void levantar_conexion(Grafo *, char *, char *);
+void *levantar_conexion(void *arg);
 
 //grafo en base a la topologia elegida
 Grafo *generar_topologia();
@@ -466,6 +473,9 @@ void *ajustar_pesos(void *arg) {
         Arista *a2 = temporal->arista_adyacente_2;
 
         //aqui podria haber un if para que no entre si la conexion esta caida
+        if(a1->caida)   //si la conexion esta caida rompe el ciclo directamente
+            break;
+
         //se estandariza el orden de bloqueo de los mutex para evitar deadlocks
         if(a1 < a2) {
             pthread_mutex_lock(&a1->mutex);
@@ -512,8 +522,9 @@ void *ajustar_pesos(void *arg) {
         //peso_total += temporal->arista_adyacente_1->peso;
         temporal = temporal->next;
     }
-    //printf("\n\tPeso del camino luego del ajuste: %d", peso_total);
-    //sleep(20);  //funciona en segundos
+    
+    //si llega hasta aqui es que no hubo problemas con ninguna conexion del camino
+    //antes guardar el camino en una estructura o archivo
     free(camino);   //se libera el camino
 
     return NULL;
@@ -528,12 +539,15 @@ void prueba_hilos(Grafo *grafo)
     {
         printf("\n\tCamino de rt0 a rt4:\n");
         Camino *camino = dijkstra(grafo, "rt00", "rt04");
-        imprimir_camino(camino);
-        pthread_t thread;
-        
-        pthread_create(&thread, NULL, ajustar_pesos, camino);
-        pthread_detach(thread);
-
+        if(!camino)
+            printf("\n\tError: conexiones caidas, no hay forma de transmitir los datos");
+        else {
+            imprimir_camino(camino);
+            pthread_t thread;
+            
+            pthread_create(&thread, NULL, ajustar_pesos, camino);
+            pthread_detach(thread);
+        }
         printf("\n\tSalir?(1-si/2-no): ");
         scanf("%d", &opc);
     }while(opc == 2);
@@ -552,31 +566,38 @@ void imprimir_camino(Camino *camino)
     }
 }
 
-void levantar_conexion(Grafo *grafo, char *v_1, char *v_2) {
-    Vertice *vertice_1 = buscar_vertice(grafo, v_1);
-    Vertice *vertice_2 = buscar_vertice(grafo, v_2);
+//que pasa si restablezco la misma conexion 2 veces (podria usar una cola de prioridad)
+void *levantar_conexion(void *arg) {    //Deberia haber un mutex aqui??
+    Reconexion *reconexion = (Reconexion *)arg; //casting
+    Vertice *vertice_1 = buscar_vertice(reconexion->grafo, reconexion->vertice_1);
+    Vertice *vertice_2 = buscar_vertice(reconexion->grafo, reconexion->vertice_2);
 
-    if(!vertice_1 || vertice_2) {
+    if(!vertice_1 || !vertice_2) {
         printf("\n\tError: uno o ambos vertices no existen");
-        return;
+        return NULL;
     }
 
     Arista *conexion_1 = encontrar_arista(vertice_1, vertice_2);
     Arista *conexion_2 = encontrar_arista(vertice_2, vertice_1);
     if(!conexion_1) {
         printf("\n\tError: no existe conexion entre %s y %s", vertice_1->name, vertice_2->name);
-        return;
+        return NULL;
     }
 
     if(conexion_1->caida) {   //caso en que la conexion no esta caida
         printf("\n\tLa conexion no esta caida");
-        return;
+        return NULL;
     }
 
     //tengo que hacer que se tome un tiempo antes de que se levante la conexion 
     //probablemente tenga que ser una formula para obtener el tiempo necesario para que el peso de la conexion quede en su base
+    //para eso creo que tendira que almacenar su peso original
+    //si almaceno su peso original ya no es necesario obtener una formula
+    sleep(70);  //este sleep es para que le de tiempo a los hilos de restar lo que sumaron al peso de la arista
     conexion_1->caida = false;
     conexion_2->caida = false;
+    printf("\n\tConexion restablecida con exito");
+    return NULL;
 }
 
 Grafo *generar_topologia()

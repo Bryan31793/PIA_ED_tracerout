@@ -58,6 +58,11 @@ typedef struct Reconexion {     //estructura necesaria para empaquetar los argum
 } Reconexion; 
 
 
+typedef struct nombre_vertice {     //estructura para usar archivos
+    char nombre[5];
+}nombre_vertice;
+
+
 //crea un grafo y devuelve un puntero a este
 Grafo *crear_grafo();
 
@@ -107,6 +112,9 @@ void *levantar_conexion(void *arg);
 
 //grafo en base a la topologia elegida
 Grafo *generar_topologia();
+
+//funcion para imprimir camino en archivo secuencial
+void imprimir_camino_archivo(Camino *);
 
 int main() {
     //Grafo *grafo = crear_grafo();
@@ -158,6 +166,13 @@ int main() {
     for(int i = 0; i < 2; i++) {
         pthread_detach(threads[i]);
     }*/
+   FILE *archivo = fopen("caminos.txt", "w");
+
+   if(!archivo)
+        printf("Error al abrir archivo");
+    
+    fclose(archivo);
+
    Grafo *grafo = generar_topologia();
    
    prueba_hilos(grafo);
@@ -466,15 +481,17 @@ Arista *encontrar_arista(Vertice *inicio, Vertice *destino) {//no necesito el gr
 void *ajustar_pesos(void *arg) {
     Camino *camino = (Camino *)arg; //casting
     Nodo_camino *temporal = camino->head;
+    
     //int peso_total = 0;
 
+    //imprimir_camino_archivo(camino);
     while(temporal && temporal->arista_adyacente_1) { //temporal->caida != true     ??
         Arista *a1 = temporal->arista_adyacente_1;
         Arista *a2 = temporal->arista_adyacente_2;
 
         //aqui podria haber un if para que no entre si la conexion esta caida
         if(a1->caida)   //si la conexion esta caida rompe el ciclo directamente
-            break;
+            return NULL;  //aqui es un return
 
         //se estandariza el orden de bloqueo de los mutex para evitar deadlocks
         if(a1 < a2) {
@@ -490,13 +507,16 @@ void *ajustar_pesos(void *arg) {
 
         //aqui tendria que hacer algo por si se supera el limite
         if(temporal->arista_adyacente_1->peso > temporal->arista_adyacente_1->peso_max) {   //si se supera al peso en la suma anterior ó en otro hilo
+            printf("\n\tConexion %s - %s caida", temporal->vertice->name, temporal->next->vertice->name);
+            printf("\n\tPeso arista caida: %d", temporal->arista_adyacente_1->peso);
             temporal->arista_adyacente_1->peso -= 10;
             temporal->arista_adyacente_2->peso -= 10;
+            printf("\n\tPeso arista caida: %d", temporal->arista_adyacente_1->peso);    //esto no va
             temporal->arista_adyacente_1->caida = true; //ahora estan caidas
             temporal->arista_adyacente_2->caida = true;
             pthread_mutex_unlock(&a1->mutex);   //se desbloquean los mutex
             pthread_mutex_unlock(&a2->mutex);
-            break;  //ya no continua el ciclo
+            return NULL;  //ya no continua el ciclo       aqui es un return
             //debe haber algo que diferencie si se completo el camino o no (para mostrarlo)
         }
 
@@ -522,9 +542,12 @@ void *ajustar_pesos(void *arg) {
         //peso_total += temporal->arista_adyacente_1->peso;
         temporal = temporal->next;
     }
-    
+    //imprimir_camino_archivo(camino);
     //si llega hasta aqui es que no hubo problemas con ninguna conexion del camino
     //antes guardar el camino en una estructura o archivo
+    //antes de liberar el camino lo imprimo en el archivo
+    
+    imprimir_camino_archivo(camino);
     free(camino);   //se libera el camino
 
     return NULL;
@@ -537,12 +560,12 @@ void prueba_hilos(Grafo *grafo)
     printf("\n\t**Prueba de hilos**");
     do
     {
-        printf("\n\tCamino de rt0 a rt4:\n");
-        Camino *camino = dijkstra(grafo, "rt00", "rt04");
+        printf("\n\tCamino de pc00 a pc08:\n");
+        Camino *camino = dijkstra(grafo, "pc00", "pc08");
         if(!camino)
             printf("\n\tError: conexiones caidas, no hay forma de transmitir los datos");
         else {
-            imprimir_camino(camino);
+            //imprimir_camino_archivo(camino);    //esto va dentro del thread
             pthread_t thread;
             
             pthread_create(&thread, NULL, ajustar_pesos, camino);
@@ -558,7 +581,7 @@ void imprimir_camino(Camino *camino)
 {
     Nodo_camino *temporal = camino->head;
 
-    printf("\n\tCamino:\n");
+    //printf("\n\tCamino:\n");
     while(temporal)
     {
         printf(" %s --- ", temporal->vertice->name);
@@ -594,9 +617,13 @@ void *levantar_conexion(void *arg) {    //Deberia haber un mutex aqui??
     //para eso creo que tendira que almacenar su peso original
     //si almaceno su peso original ya no es necesario obtener una formula
     sleep(70);  //este sleep es para que le de tiempo a los hilos de restar lo que sumaron al peso de la arista
-    conexion_1->caida = false;
-    conexion_2->caida = false;
-    printf("\n\tConexion restablecida con exito");
+
+    if(conexion_1) {    //esta condicion es necesaria porque el usuario puede ejecutar esta funcion 2 veces seguidas
+        conexion_1->caida = false;
+        conexion_2->caida = false;
+        printf("\n\tConexion restablecida con exito");
+        return NULL;
+    }
     return NULL;
 }
 
@@ -604,13 +631,30 @@ Grafo *generar_topologia()
 {
     Grafo *grafo = crear_grafo();
 
+    //routers
     agregar_vertice(grafo, "rt00");    
     agregar_vertice(grafo, "rt01"); 
- //   agregar_vertice(grafo, "cp0");   
     agregar_vertice(grafo, "rt02");
     agregar_vertice(grafo, "rt03");
     agregar_vertice(grafo, "rt04");
 
+    //switches
+    agregar_vertice(grafo, "sw00");
+    agregar_vertice(grafo, "sw01");
+    agregar_vertice(grafo, "sw02");
+
+    //computadoras
+    agregar_vertice(grafo, "pc00");
+    agregar_vertice(grafo, "pc01");
+    agregar_vertice(grafo, "pc02");
+    agregar_vertice(grafo, "pc03");
+    agregar_vertice(grafo, "pc04");
+    agregar_vertice(grafo, "pc05");
+    agregar_vertice(grafo, "pc06");
+    agregar_vertice(grafo, "pc07");
+    agregar_vertice(grafo, "pc08");
+
+    //routers a routers
     agregar_arista(grafo, "rt00", "rt01", 10, 100);
     agregar_arista(grafo, "rt00", "rt02", 10, 100);
     agregar_arista(grafo, "rt00", "rt03", 10, 100);
@@ -622,6 +666,43 @@ Grafo *generar_topologia()
     agregar_arista(grafo, "rt02", "rt04", 10, 100);
     agregar_arista(grafo, "rt03", "rt04", 10, 100);
 
+    //routers a switches
+    agregar_arista(grafo, "rt00", "sw00", 10, 100);
+    agregar_arista(grafo, "rt01", "sw01", 10, 100);
+    agregar_arista(grafo, "rt02", "sw02", 10, 100);
+
+    //switches a computadoras
+    agregar_arista(grafo, "sw00", "pc00", 10, 100);
+    agregar_arista(grafo, "sw00", "pc01", 10, 100);
+    agregar_arista(grafo, "sw00", "pc02", 10, 100);
+    agregar_arista(grafo, "sw01", "pc03", 10, 100);
+    agregar_arista(grafo, "sw01", "pc04", 10, 100);
+    agregar_arista(grafo, "sw01", "pc05", 10, 100);
+    agregar_arista(grafo, "sw02", "pc06", 10, 100);
+    agregar_arista(grafo, "sw02", "pc07", 10, 100);
+    agregar_arista(grafo, "sw02", "pc08", 10, 100);
     return grafo;
     
+}
+
+void imprimir_camino_archivo(Camino *camino) {
+    if(!camino)
+        printf("\n\tEL CAMINO ESTA VACIO");
+    FILE *archivo = fopen("caminos.txt", "a");  // modo append (agrega al final)
+    if (archivo == NULL) {
+        printf("No se pudo abrir el archivo");
+        return;
+    }
+
+    Nodo_camino *temporal = camino->head;
+    while (temporal) {
+        fprintf(archivo, "%s", temporal->vertice->name);
+        if (temporal->next != NULL) {
+            fprintf(archivo, " --- ");  // separador entre vértices
+        }
+        temporal = temporal->next;
+    }
+
+    fprintf(archivo, "\n");  // termina la línea del camino
+    fclose(archivo);         // muy importante cerrar el archivo
 }

@@ -16,6 +16,7 @@ typedef struct Arista{
     struct Arista *next;        //siguiente arista incidente al vertice actual
     bool caida;         //indica si la conexion esta caida o no
     int peso_max;       //el peso maximo que soporta la arista (su ancho de banda)
+    int latencia;
 } Arista;
 
 typedef struct Vertice{
@@ -76,10 +77,10 @@ Vertice *crear_vertice(char *);
 Vertice *buscar_vertice(Grafo *, char *);
 
 //conecta 2 vertices del grafo con una arista
-void agregar_arista(Grafo *, char *, char *, int, int);
+void agregar_arista(Grafo *, char *, char *, int, int, int);
 
 //crea una arista dados dos extremos
-void crear_arista(int, int, Vertice *, Vertice *);
+void crear_arista(int, int, int, Vertice *, Vertice *);
 
 //busca una arista e indica si existe o no
 int existe_arista(Vertice *, Vertice *);
@@ -242,7 +243,7 @@ Vertice *buscar_vertice(Grafo *grafo, char *nombre) {
 }
 
 
-void agregar_arista(Grafo *grafo, char *inicio, char *destino, int peso, int peso_maximo) {
+void agregar_arista(Grafo *grafo, char *inicio, char *destino, int peso, int peso_maximo, int latencia) {
     //se buscan ambos vertices
     Vertice *vertice_inicial = buscar_vertice(grafo, inicio);
     Vertice *vertice_destino = buscar_vertice(grafo, destino);
@@ -258,12 +259,12 @@ void agregar_arista(Grafo *grafo, char *inicio, char *destino, int peso, int pes
     }
 
     //se crea una arista para cada vertice porque no es dirigida
-    crear_arista(peso, peso_maximo, vertice_inicial, vertice_destino);   
-    crear_arista(peso, peso_maximo, vertice_destino, vertice_inicial);
+    crear_arista(peso, peso_maximo, latencia, vertice_inicial, vertice_destino);   
+    crear_arista(peso, peso_maximo, latencia, vertice_destino, vertice_inicial);
     
 }
 
-void crear_arista(int peso, int peso_maximo, Vertice *vertice_inicial, Vertice *vertice_destino) {
+void crear_arista(int peso, int peso_maximo, int latencia, Vertice *vertice_inicial, Vertice *vertice_destino) {
     Arista *nueva_arista = (Arista*)malloc(sizeof(Arista)); //se crea la arista
 
     if(!nueva_arista) {  //validar que no sea NULL
@@ -279,6 +280,7 @@ void crear_arista(int peso, int peso_maximo, Vertice *vertice_inicial, Vertice *
     pthread_mutex_init(&nueva_arista->mutex, NULL);     //inicializar mutex (destruir al final)
     nueva_arista->caida = false;    //nuevos campos inicializados
     nueva_arista->peso_max = peso_maximo;
+    nueva_arista->latencia = latencia;
 }
 
 int existe_arista(Vertice *vertice_1, Vertice *vertice_2) {
@@ -529,7 +531,7 @@ void *ajustar_pesos(void *arg) {
         pthread_mutex_unlock(&a1->mutex);   //se desbloquean los mutex
         pthread_mutex_unlock(&a2->mutex);
 
-        sleep(20);  //se pone a dormir al hilo (funciona en segundos)
+        sleep(temporal->arista_adyacente_1->latencia);  //se pone a dormir al hilo (funciona en segundos)
 
         if(a1 < a2) {   //podria ser una funcion??
             pthread_mutex_lock(&a1->mutex);
@@ -571,7 +573,7 @@ void prueba_hilos(Grafo *grafo)
         if(!camino)
             printf("\n\tError: conexiones caidas, no hay forma de transmitir los datos");
         else {
-            //imprimir_camino_archivo(camino);    //esto va dentro del thread
+            imprimir_camino(camino);    //esto va dentro del thread
             pthread_t thread;
             
             pthread_create(&thread, NULL, ajustar_pesos, camino);
@@ -661,32 +663,32 @@ Grafo *generar_topologia()
     agregar_vertice(grafo, "pc08");
 
     //routers a routers
-    agregar_arista(grafo, "rt00", "rt01", 10, 100);
-    agregar_arista(grafo, "rt00", "rt02", 10, 100);
-    agregar_arista(grafo, "rt00", "rt03", 10, 100);
-    agregar_arista(grafo, "rt00", "rt04", 10, 100);
-    agregar_arista(grafo, "rt01", "rt02", 10, 100);
-    agregar_arista(grafo, "rt01", "rt03", 10, 100);
-    agregar_arista(grafo, "rt01", "rt04", 10, 100);
-    agregar_arista(grafo, "rt02", "rt03", 10, 100);
-    agregar_arista(grafo, "rt02", "rt04", 10, 100);
-    agregar_arista(grafo, "rt03", "rt04", 10, 100);
+    agregar_arista(grafo, "rt00", "rt01", 10, 100, 20);
+    agregar_arista(grafo, "rt00", "rt02", 10, 100, 20);
+    agregar_arista(grafo, "rt00", "rt03", 10, 100, 20);
+    agregar_arista(grafo, "rt00", "rt04", 10, 100, 20);
+    agregar_arista(grafo, "rt01", "rt02", 10, 100, 20);
+    agregar_arista(grafo, "rt01", "rt03", 10, 100, 20);
+    agregar_arista(grafo, "rt01", "rt04", 10, 100, 20);
+    agregar_arista(grafo, "rt02", "rt03", 10, 100, 20);
+    agregar_arista(grafo, "rt02", "rt04", 10, 100, 20);
+    agregar_arista(grafo, "rt03", "rt04", 10, 100, 20);
 
     //routers a switches
-    agregar_arista(grafo, "rt00", "sw00", 10, 100);
-    agregar_arista(grafo, "rt01", "sw01", 10, 100);
-    agregar_arista(grafo, "rt02", "sw02", 10, 100);
+    agregar_arista(grafo, "rt00", "sw00", 10, 100, 0);
+    agregar_arista(grafo, "rt01", "sw01", 10, 100, 0);
+    agregar_arista(grafo, "rt02", "sw02", 10, 100, 0);
 
     //switches a computadoras
-    agregar_arista(grafo, "sw00", "pc00", 10, 100);
-    agregar_arista(grafo, "sw00", "pc01", 10, 100);
-    agregar_arista(grafo, "sw00", "pc02", 10, 100);
-    agregar_arista(grafo, "sw01", "pc03", 10, 100);
-    agregar_arista(grafo, "sw01", "pc04", 10, 100);
-    agregar_arista(grafo, "sw01", "pc05", 10, 100);
-    agregar_arista(grafo, "sw02", "pc06", 10, 100);
-    agregar_arista(grafo, "sw02", "pc07", 10, 100);
-    agregar_arista(grafo, "sw02", "pc08", 10, 100);
+    agregar_arista(grafo, "sw00", "pc00", 10, 100, 0);
+    agregar_arista(grafo, "sw00", "pc01", 10, 100, 0);
+    agregar_arista(grafo, "sw00", "pc02", 10, 100, 0);
+    agregar_arista(grafo, "sw01", "pc03", 10, 100, 0);
+    agregar_arista(grafo, "sw01", "pc04", 10, 100, 0);
+    agregar_arista(grafo, "sw01", "pc05", 10, 100, 0);
+    agregar_arista(grafo, "sw02", "pc06", 10, 100, 0);
+    agregar_arista(grafo, "sw02", "pc07", 10, 100, 0);
+    agregar_arista(grafo, "sw02", "pc08", 10, 100, 0);
     return grafo;
     
 }

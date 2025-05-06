@@ -114,7 +114,7 @@ void *levantar_conexion(void *arg);
 Grafo *generar_topologia();
 
 //funcion para imprimir camino en archivo secuencial
-void imprimir_camino_archivo(Camino *);
+void imprimir_camino_archivo(Camino *, char *);
 
 int main() {
     //Grafo *grafo = crear_grafo();
@@ -490,9 +490,11 @@ void *ajustar_pesos(void *arg) {
         Arista *a2 = temporal->arista_adyacente_2;
 
         //aqui podria haber un if para que no entre si la conexion esta caida
-        if(a1->caida)   //si la conexion esta caida rompe el ciclo directamente
+        if(a1->caida) { //si la conexion esta caida rompe el ciclo directamente
+            imprimir_camino_archivo(camino, "caminos_no_completados.txt");
+            free(camino);
             return NULL;  //aqui es un return
-
+        }
         //se estandariza el orden de bloqueo de los mutex para evitar deadlocks
         if(a1 < a2) {
             pthread_mutex_lock(&a1->mutex);
@@ -508,14 +510,18 @@ void *ajustar_pesos(void *arg) {
         //aqui tendria que hacer algo por si se supera el limite
         if(temporal->arista_adyacente_1->peso > temporal->arista_adyacente_1->peso_max) {   //si se supera al peso en la suma anterior ó en otro hilo
             printf("\n\tConexion %s - %s caida", temporal->vertice->name, temporal->next->vertice->name);
-            printf("\n\tPeso arista caida: %d", temporal->arista_adyacente_1->peso);
+            
             temporal->arista_adyacente_1->peso -= 10;
             temporal->arista_adyacente_2->peso -= 10;
-            printf("\n\tPeso arista caida: %d", temporal->arista_adyacente_1->peso);    //esto no va
+            
             temporal->arista_adyacente_1->caida = true; //ahora estan caidas
             temporal->arista_adyacente_2->caida = true;
             pthread_mutex_unlock(&a1->mutex);   //se desbloquean los mutex
             pthread_mutex_unlock(&a2->mutex);
+
+            imprimir_camino_archivo(camino, "caminos_no_completados.txt");
+            free(camino);
+
             return NULL;  //ya no continua el ciclo       aqui es un return
             //debe haber algo que diferencie si se completo el camino o no (para mostrarlo)
         }
@@ -547,7 +553,7 @@ void *ajustar_pesos(void *arg) {
     //antes guardar el camino en una estructura o archivo
     //antes de liberar el camino lo imprimo en el archivo
     
-    imprimir_camino_archivo(camino);
+    imprimir_camino_archivo(camino, "caminos.txt"); //se imprime el camino en caminos porque se completo el recorrido
     free(camino);   //se libera el camino
 
     return NULL;
@@ -685,10 +691,8 @@ Grafo *generar_topologia()
     
 }
 
-void imprimir_camino_archivo(Camino *camino) {
-    if(!camino)
-        printf("\n\tEL CAMINO ESTA VACIO");
-    FILE *archivo = fopen("caminos.txt", "a");  // modo append (agrega al final)
+void imprimir_camino_archivo(Camino *camino, char *nombre_archivo) {
+    FILE *archivo = fopen(nombre_archivo, "a");  // modo append (agrega al final)
     if (archivo == NULL) {
         printf("No se pudo abrir el archivo");
         return;

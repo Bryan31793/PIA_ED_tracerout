@@ -5,6 +5,7 @@
 #include <pthread.h>    //para hilos
 #include <unistd.h>     //para la funcion usleep
 #include <stdbool.h>
+#include <ctype.h>
 
 //se pueden agregar mas campos a los TDA
 struct Vertice;
@@ -117,56 +118,19 @@ Grafo *generar_topologia();
 //funcion para imprimir camino en archivo secuencial
 void imprimir_camino_archivo(Camino *, char *);
 
+void leer_caminos_archivo(char *);
+
+
+//funciones para el menu
+void menu();
+
+void limpiar_pantalla();
+
+int validacion_equipos(char *);
+
 int main() {
-    //Grafo *grafo = crear_grafo();
-
-    /*
-    agregar_vertice(grafo, "cp0");    
-    agregar_vertice(grafo, "sw0"); 
- //   agregar_vertice(grafo, "cp0");   
-    agregar_vertice(grafo, "rt0");
-    agregar_vertice(grafo, "cp1");
-    agregar_vertice(grafo, "rt1");
-
-    agregar_arista(grafo, "cp0", "sw0", 10);
-    agregar_arista(grafo, "cp0", "rt0", 5);
-   // agregar_arista(grafo, "cp0", "sw0", 10);
-    agregar_arista(grafo, "sw0", "rt0", 15);
-    agregar_arista(grafo, "cp1", "sw0", 20);
-    agregar_arista(grafo, "rt0", "rt1", 25);
     
-    imprimir_grafo(grafo);
-
-    printf("\n\n");
-    Camino *camino = dijkstra(grafo, "sw0", "rt1");
-    Nodo_camino *temporal = camino->head;
-    
-    int suma_peso = 0;
-    printf("\n\tCamino de sw0 a rt0:\n\n");
-    while(temporal)
-    {
-        printf(" %s --- ", temporal->vertice->name);
-
-        if(temporal->arista_adyacente_1 != NULL)
-            suma_peso += temporal->arista_adyacente_1->peso;
-
-        temporal = temporal->next;
-    }
-
-    printf("\n\tEl peso del camino es: %d", suma_peso);
-
-    
-    pthread_t threads[2];
-
-    for(int i = 0; i < 2; i++) {
-        pthread_create(&threads[i], NULL, ajustar_pesos, camino);
-    } 
-
-    printf("\n\tHola como estas?");
-    
-    for(int i = 0; i < 2; i++) {
-        pthread_detach(threads[i]);
-    }*/
+    //inicializacion de archivos
    FILE *archivo = fopen("caminos.txt", "w");
 
    if(!archivo)
@@ -174,9 +138,15 @@ int main() {
     
     fclose(archivo);
 
-   Grafo *grafo = generar_topologia();
+    archivo = fopen("caminos_no_completados.txt", "w");
+   if(!archivo)
+        printf("Error al abrir archivo");
+    
+    fclose(archivo);
+
+   menu();
    
-   prueba_hilos(grafo);
+   
     
     return 0;
 }
@@ -711,4 +681,192 @@ void imprimir_camino_archivo(Camino *camino, char *nombre_archivo) {
 
     fprintf(archivo, "\n");  // termina la línea del camino
     fclose(archivo);         // muy importante cerrar el archivo
+}
+
+void menu()
+{
+    int opc;
+    Grafo *grafo = generar_topologia();
+    char vertice_inicio[5], vertice_destino[5];
+    Vertice *vertice_1, *vertice_2;
+    Reconexion *conexion_caida = malloc(sizeof(Reconexion));
+    
+
+    do
+    {
+        printf("\n\tMENU");
+        printf("\n\t1-Enivar informacion"); 
+        printf("\n\t2-Levantar conexion");      //levanta una conexion dados dos vertices
+        printf("\n\t3-Caminos completados");    //imprime todos los caminos completados
+        printf("\n\t4-Caminos no completados");     //imprime todos los caminos no completados    
+        printf("\n\t5-Salir");
+        printf("\nSelecciona una opcion: ");
+        scanf("%d", &opc);  //validar entrada
+
+        switch(opc)
+        {
+            case 1:
+                
+                int peso_formato;
+
+                printf("\n\tIngresa el nombre del equipo de inicio: ");
+                fgets(vertice_inicio, 5, stdin);
+                vertice_inicio[strcspn(vertice_inicio, "\n")] = '\0'; //quita el salto de linea
+
+                printf("\n\tIngresa el nombre del equipo destino: ");
+                fgets(vertice_destino, 5, stdin);
+                vertice_destino[strcspn(vertice_destino, "\n")] = '\0'; //quita el salto de linea
+
+                if(!validacion_equipos(vertice_inicio) || !validacion_equipos(vertice_destino))
+                {
+                    printf("\n\tError: el nombre del equipo debe ser PC##");    //a donde deberia ir a partir de aqui??
+                    break;
+                }
+                    
+                
+                vertice_1 = buscar_vertice(grafo, vertice_inicio);
+                vertice_2 = buscar_vertice(grafo, vertice_destino);
+                if(!vertice_1 || !vertice_2)
+                {
+                    printf("\n\tError: no se encontro uno o ambos equipos");
+                    break;
+                }
+
+                printf("\n\tQue deseas enviar?");   //esto todavia no funciona
+                printf("\n\t1-Mensaje");
+                printf("\n\t2-Archivo");
+                printf("\n\t3-Video");
+                scanf("%d", &peso_formato);     //validar entrada
+
+                switch(peso_formato)    //se asigna el peso (en ancho de banda que va a ocupar)
+                {
+                    case 1:
+                        peso_formato = 5;
+                        break;
+
+                    case 2:
+                        peso_formato = 10;
+                        break;
+
+                    case 3:
+                        peso_formato = 15;
+                        break;
+
+                    default:
+                        break;
+                }
+
+                Camino *camino = dijkstra(grafo, vertice_inicio, vertice_destino);
+                if(!camino)
+                    printf("\n\tError: conexiones caidas, no hay forma de transmitir los datos");
+                else {
+                    imprimir_camino(camino);    //esto va dentro del thread
+                    pthread_t thread;
+                    
+                    pthread_create(&thread, NULL, ajustar_pesos, camino);
+                    pthread_detach(thread);
+                }
+                
+                break;
+            
+            case 2:
+                
+                printf("\n\tIngresa el nombre del equipo 1: ");
+                fgets(vertice_inicio, 5, stdin);
+                vertice_inicio[strcspn(vertice_inicio, "\n")] = '\0'; //quita el salto de linea
+
+                printf("\n\tIngresa el nombre del equipo 2: ");
+                fgets(vertice_destino, 5, stdin);
+                vertice_destino[strcspn(vertice_destino, "\n")] = '\0'; //quita el salto de linea
+
+                if(!validacion_equipos(vertice_inicio) || !validacion_equipos(vertice_destino))
+                {
+                    printf("\n\tError: el nombre del equipo debe ser PC##");
+                    break;
+                }
+
+                vertice_1 = buscar_vertice(grafo, vertice_inicio);
+                vertice_2 = buscar_vertice(grafo, vertice_destino);
+                if(!vertice_1 || !vertice_2)
+                {
+                    printf("\n\tError: no se encontro uno o ambos equipos");
+                    break;
+                }
+                conexion_caida->grafo = grafo;
+                strcpy(vertice_inicio, conexion_caida->vertice_1);
+                strcpy(vertice_destino, conexion_caida->vertice_2);
+
+                pthread_t thread;
+                    
+                pthread_create(&thread, NULL, levantar_conexion, conexion_caida);
+                pthread_detach(thread);
+
+                break;
+            
+            case 3:
+                printf("\n\tCaminos completados hasta el momento:");
+                leer_caminos_archivo("caminos.txt");
+                break;
+
+            case 4:
+                printf("\n\tCaminos no completados por caidas de conexion:");
+                leer_caminos_archivo("caminos.txt");
+                break;
+
+            case 5:
+                printf("\n\tFin del programa");
+                break;
+                
+            default:
+                break;
+        }
+
+    }while(opc != 7);
+    
+    
+
+
+}
+
+
+int validacion_equipos(char *vertice) {
+    //los vertices debe seguir el formato PC##
+
+    if(strlen(vertice) != 4) //se valida que la longitud sea correcta 
+        return 0;
+
+    if(vertice[0] != 'P' && vertice[1] != 'C')  //los primeros dos caracteres deben ser P y C
+        return 0;
+    
+    if(!isdigit(vertice[2]) || !isdigit(vertice[3]))   //los siguientes dos digitos deben ser numeros
+        return 0;
+
+    return 1;
+    
+}
+
+void leer_caminos_archivo(char *nombre_archivo) {
+    FILE *archivo = fopen(nombre_archivo, "r");  // modo lectura
+    if (archivo == NULL) {
+        printf("No se pudo abrir el archivo\n");
+        return;
+    }
+
+    char linea[256];  // asume que cada línea tiene como máximo 255 caracteres
+    printf("Contenido del archivo:\n");
+
+    while (fgets(linea, sizeof(linea), archivo)) {
+        printf("%s", linea);  // ya incluye el salto de línea
+    }
+
+    fclose(archivo);  // muy importante cerrar el archivo
+}
+
+void limpiar_pantalla() 
+{
+    #ifdef _WIN32
+        system("cls");
+    #else
+        system("clear");
+    #endif
 }

@@ -128,6 +128,8 @@ void limpiar_pantalla();
 
 int validacion_equipos(char *);
 
+void validar_entero(char *, int *);
+
 int main() {
     
     //inicializacion de archivos
@@ -687,7 +689,7 @@ void menu()
 {
     int opc;
     Grafo *grafo = generar_topologia();
-    char vertice_inicio[5], vertice_destino[5];
+    char vertice_inicio[5], vertice_destino[5], aux[15];
     Vertice *vertice_1, *vertice_2;
     Reconexion *conexion_caida = malloc(sizeof(Reconexion));
     
@@ -701,7 +703,7 @@ void menu()
         printf("\n\t4-Caminos no completados");     //imprime todos los caminos no completados    
         printf("\n\t5-Salir");
         printf("\nSelecciona una opcion: ");
-        scanf("%d", &opc);  //validar entrada
+        validar_entero(aux, &opc);
 
         switch(opc)
         {
@@ -713,6 +715,7 @@ void menu()
                 fgets(vertice_inicio, 5, stdin);
                 vertice_inicio[strcspn(vertice_inicio, "\n")] = '\0'; //quita el salto de linea
 
+                getchar();
                 printf("\n\tIngresa el nombre del equipo destino: ");
                 fgets(vertice_destino, 5, stdin);
                 vertice_destino[strcspn(vertice_destino, "\n")] = '\0'; //quita el salto de linea
@@ -729,6 +732,8 @@ void menu()
                 if(!vertice_1 || !vertice_2)
                 {
                     printf("\n\tError: no se encontro uno o ambos equipos");
+                    printf("%s\n", vertice_inicio);
+                    printf("%s", vertice_destino);
                     break;
                 }
 
@@ -824,7 +829,7 @@ void menu()
     }while(opc != 7);
     
     
-
+    free(conexion_caida);
 
 }
 
@@ -835,7 +840,7 @@ int validacion_equipos(char *vertice) {
     if(strlen(vertice) != 4) //se valida que la longitud sea correcta 
         return 0;
 
-    if(vertice[0] != 'P' && vertice[1] != 'C')  //los primeros dos caracteres deben ser P y C
+    if(vertice[0] != 'p' && vertice[1] != 'c')  //los primeros dos caracteres deben ser P y C
         return 0;
     
     if(!isdigit(vertice[2]) || !isdigit(vertice[3]))   //los siguientes dos digitos deben ser numeros
@@ -869,4 +874,35 @@ void limpiar_pantalla()
     #else
         system("clear");
     #endif
+}
+
+void validar_entero(char *aux, int *num) {
+    int y, p, i;
+
+    do {
+        //printf(": ");
+        fgets(aux, 50, stdin);
+        aux[strcspn(aux, "\n")] = 0; // Eliminar el salto de línea
+
+        y = strlen(aux);
+        p = 1;  // Se asume válido hasta que se pruebe lo contrario
+
+        if (y == 0) {
+            p = 0; // Evita que se acepten cadenas vacías
+        } else {
+            for (i = 0; i < y; i++) {
+                if (!isdigit(aux[i])) {  // Si encuentra un caracter no numérico
+                    p = 0;
+                    break;
+                }
+            }
+        }
+
+        if (p == 0) {
+            printf("\n\n Error, ingresa un entero\n\n");
+        }
+    } while (p == 0);
+
+    *num = atoi(aux);
+    //printf("\n\n\n\t Valor leido: %d\n", *num);
 }

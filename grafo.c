@@ -50,6 +50,7 @@ typedef struct Nodo_camino {     //estructura para almacenar el camino
 
 typedef struct Camino {
     Nodo_camino *head;
+    int peso;
 } Camino;
 
 
@@ -130,6 +131,8 @@ int validacion_equipos(char *);
 
 void validar_entero(char *, int *);
 
+void limpiar_buffer();
+
 int main() {
     
     //inicializacion de archivos
@@ -140,11 +143,11 @@ int main() {
     
     fclose(archivo);
 
-    archivo = fopen("caminos_no_completados.txt", "w");
+   FILE *archivo_2 = fopen("caminos_no_completados.txt", "w");
    if(!archivo)
         printf("Error al abrir archivo");
     
-    fclose(archivo);
+    fclose(archivo_2);
 
    menu();
    
@@ -478,15 +481,15 @@ void *ajustar_pesos(void *arg) {
             pthread_mutex_lock(&a2->mutex);
             pthread_mutex_lock(&a1->mutex);
         }
-        temporal->arista_adyacente_1->peso += 10;
-        temporal->arista_adyacente_2->peso += 10;
+        temporal->arista_adyacente_1->peso += camino->peso;
+        temporal->arista_adyacente_2->peso += camino->peso;
 
         //aqui tendria que hacer algo por si se supera el limite
         if(temporal->arista_adyacente_1->peso > temporal->arista_adyacente_1->peso_max) {   //si se supera al peso en la suma anterior ó en otro hilo
             printf("\n\tConexion %s - %s caida", temporal->vertice->name, temporal->next->vertice->name);
             
-            temporal->arista_adyacente_1->peso -= 10;
-            temporal->arista_adyacente_2->peso -= 10;
+            temporal->arista_adyacente_1->peso -= camino->peso;
+            temporal->arista_adyacente_2->peso -= camino->peso;
             
             temporal->arista_adyacente_1->caida = true; //ahora estan caidas
             temporal->arista_adyacente_2->caida = true;
@@ -576,19 +579,16 @@ void *levantar_conexion(void *arg) {    //Deberia haber un mutex aqui??
     Vertice *vertice_2 = buscar_vertice(reconexion->grafo, reconexion->vertice_2);
 
     if(!vertice_1 || !vertice_2) {
-        printf("\n\tError: uno o ambos vertices no existen");
         return NULL;
     }
 
     Arista *conexion_1 = encontrar_arista(vertice_1, vertice_2);
     Arista *conexion_2 = encontrar_arista(vertice_2, vertice_1);
     if(!conexion_1) {
-        printf("\n\tError: no existe conexion entre %s y %s", vertice_1->name, vertice_2->name);
         return NULL;
     }
 
     if(conexion_1->caida) {   //caso en que la conexion no esta caida
-        printf("\n\tLa conexion no esta caida");
         return NULL;
     }
 
@@ -601,7 +601,6 @@ void *levantar_conexion(void *arg) {    //Deberia haber un mutex aqui??
     if(conexion_1) {    //esta condicion es necesaria porque el usuario puede ejecutar esta funcion 2 veces seguidas
         conexion_1->caida = false;
         conexion_2->caida = false;
-        printf("\n\tConexion restablecida con exito");
         return NULL;
     }
     return NULL;
@@ -741,7 +740,9 @@ void menu()
                 printf("\n\t1-Mensaje");
                 printf("\n\t2-Archivo");
                 printf("\n\t3-Video");
-                scanf("%d", &peso_formato);     //validar entrada
+                printf("\n\tSelecciona una opcion: ");
+                getchar();
+                validar_entero(aux, &peso_formato);
 
                 switch(peso_formato)    //se asigna el peso (en ancho de banda que va a ocupar)
                 {
@@ -762,6 +763,7 @@ void menu()
                 }
 
                 Camino *camino = dijkstra(grafo, vertice_inicio, vertice_destino);
+                camino->peso = peso_formato;
                 if(!camino)
                     printf("\n\tError: conexiones caidas, no hay forma de transmitir los datos");
                 else {
@@ -780,15 +782,10 @@ void menu()
                 fgets(vertice_inicio, 5, stdin);
                 vertice_inicio[strcspn(vertice_inicio, "\n")] = '\0'; //quita el salto de linea
 
+                getchar();
                 printf("\n\tIngresa el nombre del equipo 2: ");
                 fgets(vertice_destino, 5, stdin);
                 vertice_destino[strcspn(vertice_destino, "\n")] = '\0'; //quita el salto de linea
-
-                if(!validacion_equipos(vertice_inicio) || !validacion_equipos(vertice_destino))
-                {
-                    printf("\n\tError: el nombre del equipo debe ser PC##");
-                    break;
-                }
 
                 vertice_1 = buscar_vertice(grafo, vertice_inicio);
                 vertice_2 = buscar_vertice(grafo, vertice_destino);
@@ -797,10 +794,23 @@ void menu()
                     printf("\n\tError: no se encontro uno o ambos equipos");
                     break;
                 }
+                Arista *arista = encontrar_arista(vertice_1, vertice_2);
+
+                if(!arista)
+                {
+                    printf("\n\tError: no existe conexion entre esos equipos");
+                    break;
+                }
+                if(!arista->caida)
+                {
+                    printf("\n\tError: la conexion entre esos equipos no esta caida");
+                    break;
+                }
                 conexion_caida->grafo = grafo;
                 strcpy(vertice_inicio, conexion_caida->vertice_1);
                 strcpy(vertice_destino, conexion_caida->vertice_2);
 
+                printf("\n\tRestableciendo conexion...");
                 pthread_t thread;
                     
                 pthread_create(&thread, NULL, levantar_conexion, conexion_caida);
@@ -809,13 +819,13 @@ void menu()
                 break;
             
             case 3:
-                printf("\n\tCaminos completados hasta el momento:");
+                printf("\n\tCaminos completados hasta el momento:\n");
                 leer_caminos_archivo("caminos.txt");
                 break;
 
             case 4:
-                printf("\n\tCaminos no completados por caidas de conexion:");
-                leer_caminos_archivo("caminos.txt");
+                printf("\n\tCaminos no completados por caidas de conexion:\n");
+                leer_caminos_archivo("caminos_no_completados.txt");
                 break;
 
             case 5:
@@ -823,16 +833,24 @@ void menu()
                 break;
                 
             default:
+                printf("\n\tError: no existe esa opcion");
                 break;
-        }
 
-    }while(opc != 7);
+        }
+        printf("\n\t--- Presiona enter para continuar ---");
+        limpiar_buffer();
+
+    }while(opc != 5);
     
     
     free(conexion_caida);
 
 }
 
+void limpiar_buffer() {
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF);
+}
 
 int validacion_equipos(char *vertice) {
     //los vertices debe seguir el formato PC##

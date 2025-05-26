@@ -6,6 +6,9 @@
 #include <unistd.h>     //para la funcion usleep
 #include <stdbool.h>
 #include <ctype.h>
+#include <limits.h>
+
+#define INF 9999
 
 //se pueden agregar mas campos a los TDA
 struct Vertice;
@@ -104,6 +107,7 @@ Camino *construir_camino(Nodo_aux *, int, int);    //continuar...
 
 Arista *encontrar_arista(Vertice *, Vertice *);
 
+int recorrer_camino(Camino *);
 //Hilos
 void *ajustar_pesos(void *arg);
 
@@ -133,6 +137,8 @@ void validar_entero(char *, int *);
 
 void limpiar_buffer();
 
+void mostrar_matriz_pesos(Grafo *);
+
 int main() {
     
     //inicializacion de archivos
@@ -150,6 +156,8 @@ int main() {
     fclose(archivo_2);
 
    menu();
+   //Grafo *grafo = generar_topologia();
+   //prueba_hilos(grafo);
    
    
     
@@ -347,28 +355,28 @@ Camino* dijkstra(Grafo *grafo, const char *origen_name, char *destino_name) {   
         // explorar vecinos
         Arista *arista = nodos[u].vertice->lista_adyacencia;    //lista de adyacencia
         while (arista) {
-            if(!arista->caida) { //si la conexion no esta caida
-                Vertice *vecino = arista->destino;      //vertice adyacente al vertice u
-                int v_idx = buscar_indice(nodos, n, vecino);        //busca el indice del vertice vecino en el array nodos de tipo Nodo_aux
-                if (v_idx != -1 && !nodos[v_idx].visitado) {    //si se encuentra y no ha sido visitado
-                    int nueva_dist = nodos[u].distancia + arista->peso;//nueva distancia = distancia al nodo u + peso de la arista al vertice vecino
+            
+            Vertice *vecino = arista->destino;      //vertice adyacente al vertice u
+            int v_idx = buscar_indice(nodos, n, vecino);        //busca el indice del vertice vecino en el array nodos de tipo Nodo_aux
+            if (v_idx != -1 && !nodos[v_idx].visitado) {    //si se encuentra y no ha sido visitado
+                int nueva_dist = nodos[u].distancia + arista->peso;//nueva distancia = distancia al nodo u + peso de la arista al vertice vecino
 
-                    if (nueva_dist < nodos[v_idx].distancia) {  //si nueva distancia menor a la distancia para llegar al vertice en nodos
-                        nodos[v_idx].distancia = nueva_dist;    //actualizar la distancia para llegar al vertice en el array nodos
-                        //nodos[v_idx].anterior = nodos[u].vertice;   //actualiza puntero al vertice anterior (del cual llego)
-                        nodos[v_idx].back = &nodos[u];      //NEW FEATURE   
-                    }
+                if (nueva_dist < nodos[v_idx].distancia) {  //si nueva distancia menor a la distancia para llegar al vertice en nodos
+                    nodos[v_idx].distancia = nueva_dist;    //actualizar la distancia para llegar al vertice en el array nodos
+                    //nodos[v_idx].anterior = nodos[u].vertice;   //actualiza puntero al vertice anterior (del cual llego)
+                    nodos[v_idx].back = &nodos[u];      //NEW FEATURE   
                 }
             }
+            
             arista = arista->next;      //se avanza al siguiente
         }
         if(strcmp(nodos[u].vertice->name, destino_name) == 0) {  //se detiene el algoritmo si ya se encontro el camino mas corto a el vertice destino
             // Ejemplo: mostrar resultados
-            printf("Distancias desde %s:\n", origen_name);  //esto se va a quitar
+            /*printf("Distancias desde %s:\n", origen_name);  //esto se va a quitar
             for (int i = 0; i < n; i++) {
                 printf("A %s: %d\n", nodos[i].vertice->name,
                 nodos[i].distancia == INT_MAX ? -1 : nodos[i].distancia);
-            }
+            }*/
 
             int vd_idx = buscar_indice(nodos, n, buscar_vertice(grafo, destino_name));  
             Camino *nuevo_camino = construir_camino(nodos, vd_idx, n);
@@ -457,6 +465,7 @@ Arista *encontrar_arista(Vertice *inicio, Vertice *destino) {//no necesito el gr
 
 void *ajustar_pesos(void *arg) {
     Camino *camino = (Camino *)arg; //casting
+    int peso_extra = camino->peso;
     Nodo_camino *temporal = camino->head;
     
     //int peso_total = 0;
@@ -481,15 +490,15 @@ void *ajustar_pesos(void *arg) {
             pthread_mutex_lock(&a2->mutex);
             pthread_mutex_lock(&a1->mutex);
         }
-        temporal->arista_adyacente_1->peso += camino->peso;
-        temporal->arista_adyacente_2->peso += camino->peso;
+        temporal->arista_adyacente_1->peso += peso_extra;
+        temporal->arista_adyacente_2->peso += peso_extra;
 
         //aqui tendria que hacer algo por si se supera el limite
         if(temporal->arista_adyacente_1->peso > temporal->arista_adyacente_1->peso_max) {   //si se supera al peso en la suma anterior ó en otro hilo
             printf("\n\tConexion %s - %s caida", temporal->vertice->name, temporal->next->vertice->name);
             
-            temporal->arista_adyacente_1->peso -= camino->peso;
-            temporal->arista_adyacente_2->peso -= camino->peso;
+            temporal->arista_adyacente_1->peso -= peso_extra;
+            temporal->arista_adyacente_2->peso -= peso_extra;
             
             temporal->arista_adyacente_1->caida = true; //ahora estan caidas
             temporal->arista_adyacente_2->caida = true;
@@ -516,8 +525,8 @@ void *ajustar_pesos(void *arg) {
             pthread_mutex_lock(&a2->mutex);
             pthread_mutex_lock(&a1->mutex);
         }
-        temporal->arista_adyacente_1->peso -= 10;
-        temporal->arista_adyacente_2->peso -= 10;
+        temporal->arista_adyacente_1->peso -= peso_extra;
+        temporal->arista_adyacente_2->peso -= peso_extra;
         pthread_mutex_unlock(&a1->mutex);   //se desbloquean los mutex
         pthread_mutex_unlock(&a2->mutex);
 
@@ -549,6 +558,7 @@ void prueba_hilos(Grafo *grafo)
             printf("\n\tError: conexiones caidas, no hay forma de transmitir los datos");
         else {
             imprimir_camino(camino);    //esto va dentro del thread
+            camino->peso = 15;
             pthread_t thread;
             
             pthread_create(&thread, NULL, ajustar_pesos, camino);
@@ -596,7 +606,7 @@ void *levantar_conexion(void *arg) {    //Deberia haber un mutex aqui??
     //probablemente tenga que ser una formula para obtener el tiempo necesario para que el peso de la conexion quede en su base
     //para eso creo que tendira que almacenar su peso original
     //si almaceno su peso original ya no es necesario obtener una formula
-    sleep(70);  //este sleep es para que le de tiempo a los hilos de restar lo que sumaron al peso de la arista
+    sleep(30);  //este sleep es para que le de tiempo a los hilos de restar lo que sumaron al peso de la arista
 
     if(conexion_1) {    //esta condicion es necesaria porque el usuario puede ejecutar esta funcion 2 veces seguidas
         conexion_1->caida = false;
@@ -634,16 +644,16 @@ Grafo *generar_topologia()
     agregar_vertice(grafo, "pc08");
 
     //routers a routers
-    agregar_arista(grafo, "rt00", "rt01", 10, 100, 20);
-    agregar_arista(grafo, "rt00", "rt02", 10, 100, 20);
-    agregar_arista(grafo, "rt00", "rt03", 10, 100, 20);
-    agregar_arista(grafo, "rt00", "rt04", 10, 100, 20);
-    agregar_arista(grafo, "rt01", "rt02", 10, 100, 20);
-    agregar_arista(grafo, "rt01", "rt03", 10, 100, 20);
-    agregar_arista(grafo, "rt01", "rt04", 10, 100, 20);
-    agregar_arista(grafo, "rt02", "rt03", 10, 100, 20);
-    agregar_arista(grafo, "rt02", "rt04", 10, 100, 20);
-    agregar_arista(grafo, "rt03", "rt04", 10, 100, 20);
+    agregar_arista(grafo, "rt00", "rt01", 10, 100, 30);
+    agregar_arista(grafo, "rt00", "rt02", 10, 100, 30);
+    agregar_arista(grafo, "rt00", "rt03", 10, 100, 30);
+    agregar_arista(grafo, "rt00", "rt04", 10, 100, 30);
+    agregar_arista(grafo, "rt01", "rt02", 10, 100, 30);
+    agregar_arista(grafo, "rt01", "rt03", 10, 100, 30);
+    agregar_arista(grafo, "rt01", "rt04", 10, 100, 30);
+    agregar_arista(grafo, "rt02", "rt03", 10, 100, 30);
+    agregar_arista(grafo, "rt02", "rt04", 10, 100, 30);
+    agregar_arista(grafo, "rt03", "rt04", 10, 100, 30);
 
     //routers a switches
     agregar_arista(grafo, "rt00", "sw00", 10, 100, 0);
@@ -660,6 +670,7 @@ Grafo *generar_topologia()
     agregar_arista(grafo, "sw02", "pc06", 10, 100, 0);
     agregar_arista(grafo, "sw02", "pc07", 10, 100, 0);
     agregar_arista(grafo, "sw02", "pc08", 10, 100, 0);
+    
     return grafo;
     
 }
@@ -695,12 +706,14 @@ void menu()
 
     do
     {
+        limpiar_pantalla();
         printf("\n\tMENU");
-        printf("\n\t1-Enivar informacion"); 
+        printf("\n\t1-Enviar informacion"); 
         printf("\n\t2-Levantar conexion");      //levanta una conexion dados dos vertices
         printf("\n\t3-Caminos completados");    //imprime todos los caminos completados
-        printf("\n\t4-Caminos no completados");     //imprime todos los caminos no completados    
-        printf("\n\t5-Salir");
+        printf("\n\t4-Caminos no completados");     //imprime todos los caminos no completados
+        printf("\n\t5-Tirar conexion");    
+        printf("\n\t6-Salir");
         printf("\nSelecciona una opcion: ");
         validar_entero(aux, &opc);
 
@@ -731,8 +744,6 @@ void menu()
                 if(!vertice_1 || !vertice_2)
                 {
                     printf("\n\tError: no se encontro uno o ambos equipos");
-                    printf("%s\n", vertice_inicio);
-                    printf("%s", vertice_destino);
                     break;
                 }
 
@@ -755,7 +766,7 @@ void menu()
                         break;
 
                     case 3:
-                        peso_formato = 15;
+                        peso_formato = 25;
                         break;
 
                     default:
@@ -763,11 +774,12 @@ void menu()
                 }
 
                 Camino *camino = dijkstra(grafo, vertice_inicio, vertice_destino);
-                camino->peso = peso_formato;
                 if(!camino)
                     printf("\n\tError: conexiones caidas, no hay forma de transmitir los datos");
                 else {
-                    imprimir_camino(camino);    //esto va dentro del thread
+                    camino->peso = peso_formato;
+                    printf("\n\tRuta mas corta:\n");
+                    imprimir_camino(camino);  
                     pthread_t thread;
                     
                     pthread_create(&thread, NULL, ajustar_pesos, camino);
@@ -795,6 +807,7 @@ void menu()
                     break;
                 }
                 Arista *arista = encontrar_arista(vertice_1, vertice_2);
+                Arista *arista_levantar_2 = encontrar_arista(vertice_2, vertice_1);
 
                 if(!arista)
                 {
@@ -806,15 +819,10 @@ void menu()
                     printf("\n\tError: la conexion entre esos equipos no esta caida");
                     break;
                 }
-                conexion_caida->grafo = grafo;
-                strcpy(vertice_inicio, conexion_caida->vertice_1);
-                strcpy(vertice_destino, conexion_caida->vertice_2);
 
-                printf("\n\tRestableciendo conexion...");
-                pthread_t thread;
-                    
-                pthread_create(&thread, NULL, levantar_conexion, conexion_caida);
-                pthread_detach(thread);
+                printf("\n\tConexion restablecida");
+                arista->caida = false;
+                arista_levantar_2->caida = false;
 
                 break;
             
@@ -829,18 +837,49 @@ void menu()
                 break;
 
             case 5:
-                printf("\n\tFin del programa");
+                printf("\n\tIngresa el nombre del equipo 1: ");
+                fgets(vertice_inicio, 5, stdin);
+                vertice_inicio[strcspn(vertice_inicio, "\n")] = '\0'; //quita el salto de linea
+
+                getchar();
+                printf("\n\tIngresa el nombre del equipo 2: ");
+                fgets(vertice_destino, 5, stdin);
+                vertice_destino[strcspn(vertice_destino, "\n")] = '\0'; //quita el salto de linea
+
+                vertice_1 = buscar_vertice(grafo, vertice_inicio);
+                vertice_2 = buscar_vertice(grafo, vertice_destino);
+                if(!vertice_1 || !vertice_2)
+                {
+                    printf("\n\tError: no se encontro uno o ambos equipos");
+                    break;
+                }
+                Arista *arista_caida_1 = encontrar_arista(vertice_1, vertice_2);
+                Arista *arista_caida_2 = encontrar_arista(vertice_2, vertice_1);
+
+                if(!arista_caida_1)
+                {
+                    printf("\n\tError: no existe conexion entre esos equipos");
+                    break;
+                }
+
+                arista_caida_1->caida = true;
+                arista_caida_2->caida = true;
+                printf("\n\tConexion caida");
                 break;
                 
+            case 6:
+                printf("\n\tFin del programa");
+                break;
             default:
                 printf("\n\tError: no existe esa opcion");
                 break;
 
         }
+        getchar();
         printf("\n\t--- Presiona enter para continuar ---");
         limpiar_buffer();
 
-    }while(opc != 5);
+    }while(opc != 6);
     
     
     free(conexion_caida);
@@ -869,20 +908,20 @@ int validacion_equipos(char *vertice) {
 }
 
 void leer_caminos_archivo(char *nombre_archivo) {
-    FILE *archivo = fopen(nombre_archivo, "r");  // modo lectura
+    FILE *archivo = fopen(nombre_archivo, "r");  //modo lectura
     if (archivo == NULL) {
         printf("No se pudo abrir el archivo\n");
         return;
     }
 
-    char linea[256];  // asume que cada línea tiene como máximo 255 caracteres
+    char linea[256];  
     printf("Contenido del archivo:\n");
 
     while (fgets(linea, sizeof(linea), archivo)) {
-        printf("%s", linea);  // ya incluye el salto de línea
+        printf("%s", linea);  //ya incluye el salto de línea
     }
 
-    fclose(archivo);  // muy importante cerrar el archivo
+    fclose(archivo);  //cerrar el archivo
 }
 
 void limpiar_pantalla() 
@@ -924,3 +963,5 @@ void validar_entero(char *aux, int *num) {
     *num = atoi(aux);
     //printf("\n\n\n\t Valor leido: %d\n", *num);
 }
+
+

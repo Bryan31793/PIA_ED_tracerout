@@ -713,7 +713,7 @@ void menu()
 {
     int opc;
     Grafo *grafo = generar_topologia();
-    char vertice_inicio[15], vertice_destino[15], aux[15];
+    char vertice_inicio[30], vertice_destino[30], aux[30];
     Vertice *vertice_1, *vertice_2;
     Reconexion *conexion_caida = malloc(sizeof(Reconexion));
     
@@ -738,12 +738,12 @@ void menu()
                 int peso_formato;
 
                 printf("\n\tIngresa el nombre del equipo de inicio: ");
-                fgets(vertice_inicio, 15, stdin);
+                fgets(vertice_inicio, 30, stdin);
                 vertice_inicio[strcspn(vertice_inicio, "\n")] = '\0'; //quita el salto de linea
 
                 //getchar();
                 printf("\n\tIngresa el nombre del equipo destino: ");
-                fgets(vertice_destino, 15, stdin);
+                fgets(vertice_destino, 30, stdin);
                 vertice_destino[strcspn(vertice_destino, "\n")] = '\0'; //quita el salto de linea
 
                 if(!validacion_equipos(vertice_inicio) || !validacion_equipos(vertice_destino))
@@ -805,12 +805,12 @@ void menu()
             case 2:
                 
                 printf("\n\tIngresa el nombre del equipo 1: ");
-                fgets(vertice_inicio, 15, stdin);
+                fgets(vertice_inicio, 30, stdin);
                 vertice_inicio[strcspn(vertice_inicio, "\n")] = '\0'; //quita el salto de linea
 
                 //getchar();
                 printf("\n\tIngresa el nombre del equipo 2: ");
-                fgets(vertice_destino, 15, stdin);
+                fgets(vertice_destino, 30, stdin);
                 vertice_destino[strcspn(vertice_destino, "\n")] = '\0'; //quita el salto de linea
 
                 vertice_1 = buscar_vertice(grafo, vertice_inicio);
@@ -852,12 +852,12 @@ void menu()
 
             case 5:
                 printf("\n\tIngresa el nombre del equipo 1: ");
-                fgets(vertice_inicio, 15, stdin);
+                fgets(vertice_inicio, 30, stdin);
                 vertice_inicio[strcspn(vertice_inicio, "\n")] = '\0'; //quita el salto de linea
 
                 //getchar();
                 printf("\n\tIngresa el nombre del equipo 2: ");
-                fgets(vertice_destino, 15, stdin);
+                fgets(vertice_destino, 30, stdin);
                 vertice_destino[strcspn(vertice_destino, "\n")] = '\0'; //quita el salto de linea
 
                 vertice_1 = buscar_vertice(grafo, vertice_inicio);

@@ -114,9 +114,6 @@ void *ajustar_pesos(void *arg);
 //prueba de hilos
 void prueba_hilos(Grafo *);
 
-//funcion que levanta la conexion dado el nombre de los vertices adyacentes
-void *levantar_conexion(void *arg);
-
 //grafo en base a la topologia elegida
 Grafo *generar_topologia();
 
@@ -631,6 +628,9 @@ Grafo *generar_topologia()
     agregar_vertice(grafo, "sw00");
     agregar_vertice(grafo, "sw01");
     agregar_vertice(grafo, "sw02");
+    agregar_vertice(grafo, "sw03");
+    agregar_vertice(grafo, "sw04");
+
 
     //computadoras
     agregar_vertice(grafo, "pc00");
@@ -642,23 +642,31 @@ Grafo *generar_topologia()
     agregar_vertice(grafo, "pc06");
     agregar_vertice(grafo, "pc07");
     agregar_vertice(grafo, "pc08");
+    agregar_vertice(grafo, "pc09");
+    agregar_vertice(grafo, "pc10");
+    agregar_vertice(grafo, "pc11");
+    agregar_vertice(grafo, "pc12");
+    agregar_vertice(grafo, "pc13");
+    agregar_vertice(grafo, "pc14");
 
     //routers a routers
-    agregar_arista(grafo, "rt00", "rt01", 10, 100, 30);
-    agregar_arista(grafo, "rt00", "rt02", 10, 100, 30);
-    agregar_arista(grafo, "rt00", "rt03", 10, 100, 30);
-    agregar_arista(grafo, "rt00", "rt04", 10, 100, 30);
-    agregar_arista(grafo, "rt01", "rt02", 10, 100, 30);
-    agregar_arista(grafo, "rt01", "rt03", 10, 100, 30);
-    agregar_arista(grafo, "rt01", "rt04", 10, 100, 30);
-    agregar_arista(grafo, "rt02", "rt03", 10, 100, 30);
-    agregar_arista(grafo, "rt02", "rt04", 10, 100, 30);
-    agregar_arista(grafo, "rt03", "rt04", 10, 100, 30);
+    agregar_arista(grafo, "rt00", "rt01", 10, 100, 20);
+    agregar_arista(grafo, "rt00", "rt02", 10, 100, 20);
+    agregar_arista(grafo, "rt00", "rt03", 10, 100, 20);
+    agregar_arista(grafo, "rt00", "rt04", 10, 100, 20);
+    agregar_arista(grafo, "rt01", "rt02", 10, 100, 20);
+    agregar_arista(grafo, "rt01", "rt03", 10, 100, 20);
+    agregar_arista(grafo, "rt01", "rt04", 10, 100, 20);
+    agregar_arista(grafo, "rt02", "rt03", 10, 100, 20);
+    agregar_arista(grafo, "rt02", "rt04", 10, 100, 20);
+    agregar_arista(grafo, "rt03", "rt04", 10, 100, 20);
 
     //routers a switches
     agregar_arista(grafo, "rt00", "sw00", 10, 100, 0);
     agregar_arista(grafo, "rt01", "sw01", 10, 100, 0);
     agregar_arista(grafo, "rt02", "sw02", 10, 100, 0);
+    agregar_arista(grafo, "rt03", "sw03", 10, 100, 0);
+    agregar_arista(grafo, "rt04", "sw04", 10, 100, 0);
 
     //switches a computadoras
     agregar_arista(grafo, "sw00", "pc00", 10, 100, 0);
@@ -670,6 +678,12 @@ Grafo *generar_topologia()
     agregar_arista(grafo, "sw02", "pc06", 10, 100, 0);
     agregar_arista(grafo, "sw02", "pc07", 10, 100, 0);
     agregar_arista(grafo, "sw02", "pc08", 10, 100, 0);
+    agregar_arista(grafo, "sw03", "pc09", 10, 100, 0);
+    agregar_arista(grafo, "sw03", "pc10", 10, 100, 0);
+    agregar_arista(grafo, "sw03", "pc11", 10, 100, 0);
+    agregar_arista(grafo, "sw04", "pc12", 10, 100, 0);
+    agregar_arista(grafo, "sw04", "pc13", 10, 100, 0);
+    agregar_arista(grafo, "sw04", "pc14", 10, 100, 0);
     
     return grafo;
     
@@ -699,7 +713,7 @@ void menu()
 {
     int opc;
     Grafo *grafo = generar_topologia();
-    char vertice_inicio[5], vertice_destino[5], aux[15];
+    char vertice_inicio[15], vertice_destino[15], aux[15];
     Vertice *vertice_1, *vertice_2;
     Reconexion *conexion_caida = malloc(sizeof(Reconexion));
     
@@ -724,12 +738,12 @@ void menu()
                 int peso_formato;
 
                 printf("\n\tIngresa el nombre del equipo de inicio: ");
-                fgets(vertice_inicio, 5, stdin);
+                fgets(vertice_inicio, 15, stdin);
                 vertice_inicio[strcspn(vertice_inicio, "\n")] = '\0'; //quita el salto de linea
 
-                getchar();
+                //getchar();
                 printf("\n\tIngresa el nombre del equipo destino: ");
-                fgets(vertice_destino, 5, stdin);
+                fgets(vertice_destino, 15, stdin);
                 vertice_destino[strcspn(vertice_destino, "\n")] = '\0'; //quita el salto de linea
 
                 if(!validacion_equipos(vertice_inicio) || !validacion_equipos(vertice_destino))
@@ -746,13 +760,13 @@ void menu()
                     printf("\n\tError: no se encontro uno o ambos equipos");
                     break;
                 }
-
+                //getchar();
                 printf("\n\tQue deseas enviar?");   //esto todavia no funciona
                 printf("\n\t1-Mensaje");
                 printf("\n\t2-Archivo");
                 printf("\n\t3-Video");
                 printf("\n\tSelecciona una opcion: ");
-                getchar();
+                //getchar();
                 validar_entero(aux, &peso_formato);
 
                 switch(peso_formato)    //se asigna el peso (en ancho de banda que va a ocupar)
@@ -791,12 +805,12 @@ void menu()
             case 2:
                 
                 printf("\n\tIngresa el nombre del equipo 1: ");
-                fgets(vertice_inicio, 5, stdin);
+                fgets(vertice_inicio, 15, stdin);
                 vertice_inicio[strcspn(vertice_inicio, "\n")] = '\0'; //quita el salto de linea
 
-                getchar();
+                //getchar();
                 printf("\n\tIngresa el nombre del equipo 2: ");
-                fgets(vertice_destino, 5, stdin);
+                fgets(vertice_destino, 15, stdin);
                 vertice_destino[strcspn(vertice_destino, "\n")] = '\0'; //quita el salto de linea
 
                 vertice_1 = buscar_vertice(grafo, vertice_inicio);
@@ -838,12 +852,12 @@ void menu()
 
             case 5:
                 printf("\n\tIngresa el nombre del equipo 1: ");
-                fgets(vertice_inicio, 5, stdin);
+                fgets(vertice_inicio, 15, stdin);
                 vertice_inicio[strcspn(vertice_inicio, "\n")] = '\0'; //quita el salto de linea
 
-                getchar();
+                //getchar();
                 printf("\n\tIngresa el nombre del equipo 2: ");
-                fgets(vertice_destino, 5, stdin);
+                fgets(vertice_destino, 15, stdin);
                 vertice_destino[strcspn(vertice_destino, "\n")] = '\0'; //quita el salto de linea
 
                 vertice_1 = buscar_vertice(grafo, vertice_inicio);
@@ -875,7 +889,7 @@ void menu()
                 break;
 
         }
-        getchar();
+        //getchar();
         printf("\n\t--- Presiona enter para continuar ---");
         limpiar_buffer();
 
